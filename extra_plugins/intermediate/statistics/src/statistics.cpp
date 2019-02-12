@@ -40,21 +40,34 @@
  */
 
 #include <ipfixcol2.h>
+#include <bits/unique_ptr.h>
+#include "map.h"
+#include "services.h"
+#include <thread>
+//#include <ipfixcol2/message_ipfix.h>
+#include "../../../../src/core/message_ipfix.h"
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
-        // Plugin type
-        .type = IPX_PT_INTERMEDIATE,
         // Plugin identification name
-        .name = "statistics",
+        "statistics",
         // Brief description of plugin
-        .dsc = "Operational statistics module",
+        "Operational statistics module",
+        // Plugin type
+        IPX_PT_INTERMEDIATE,
         // Configuration flags (reserved for future use)
-        .flags = 0,
+        0,
         // Plugin version string (like "1.2.3")
-        .version = "1.0.0",
+        "1.0.0",
         // Minimal IPFIXcol version string (like "1.2.3")
-        .ipx_min = "2.0.0"
+        "2.0.0"
+};
+
+/** Instance */
+struct Instance {
+    uint16_t snmp_kill;
+    StatMap *stats;
+    std::vector <std::thread *> services;
 };
 
 int
@@ -62,6 +75,30 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
 {
     (void) ctx;
     (void) params;
+
+    struct Instance *data = nullptr;
+    try{
+        std::unique_ptr<Instance> ptr(new Instance);
+        std::unique_ptr<StatMap> map(new StatMap);
+
+
+
+        data = ptr.release();
+        data->stats = map.release();
+        data->snmp_kill = 0;
+
+        data->stats->pkt_counter=0;
+
+        std::unique_ptr<std::thread> s(new std::thread(snmp_agent, data->stats, &data->snmp_kill));
+        data->services.push_back(s.release());
+    }
+    catch (...){
+        IPX_CTX_ERROR(ctx, "Exception has occured in Statistics module - Init",'\0');
+        return IPX_ERR_DENIED;
+    }
+
+    ipx_ctx_private_set(ctx, data);
+
     return IPX_OK;
 }
 
@@ -69,16 +106,28 @@ void
 ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
 {
     (void) ctx;
-    (void) cfg;
+
+    struct Instance *data = reinterpret_cast<Instance *>(cfg);
+    delete data->stats;
+    data->snmp_kill = 1;
+
+    std::vector<std::thread*>::iterator it;
+    for (it = data->services.begin(); it != data->services.end(); it++){
+        (*(*it)).join();
+        delete *it;
+    }
+    delete data;
 }
 
 int
 ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
 {
-    (void) cfg;
 
+    struct Instance *data = reinterpret_cast<Instance *>(cfg);
     ipx_msg_ipfix_t *ipfix_msg = ipx_msg_base2ipfix(msg);
-    
+
+    struct ipx_msg_ctx msg_ctx = ipfix_msg->ctx;
+    data->stats->pkt_counter++;
 
     ipx_ctx_msg_pass(ctx, msg);
     return IPX_OK;
