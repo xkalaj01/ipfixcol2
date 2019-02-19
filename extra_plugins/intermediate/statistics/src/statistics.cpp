@@ -46,6 +46,7 @@
 #include <thread>
 //#include <ipfixcol2/message_ipfix.h>
 #include "../../../../src/core/message_ipfix.h"
+#include "snmp/mib.h"
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
@@ -63,12 +64,6 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
         "2.0.0"
 };
 
-/** Instance */
-struct Instance {
-    uint16_t snmp_kill;
-    StatMap *stats;
-    std::vector <std::thread *> services;
-};
 
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
@@ -80,16 +75,17 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
     try{
         std::unique_ptr<Instance> ptr(new Instance);
         std::unique_ptr<StatMap> map(new StatMap);
-
-
+        std::unique_ptr<MIBBase> mibClass(new MIBBase);
 
         data = ptr.release();
         data->stats = map.release();
         data->snmp_kill = 0;
-
+        data->int_var = 0;
+        data->uns_var = 0;
+        data->mib = mibClass.release();
         data->stats->pkt_counter=0;
 
-        std::unique_ptr<std::thread> s(new std::thread(snmp_agent, data->stats, &data->snmp_kill));
+        std::unique_ptr<std::thread> s(new std::thread(snmp_agent, data));
         data->services.push_back(s.release());
     }
     catch (...){
@@ -126,7 +122,13 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
     struct Instance *data = reinterpret_cast<Instance *>(cfg);
     ipx_msg_ipfix_t *ipfix_msg = ipx_msg_base2ipfix(msg);
 
-    struct ipx_msg_ctx msg_ctx = ipfix_msg->ctx;
+    while(data->mib_lock.test_and_set(std::memory_order_acquire));
+    data->mib->processPacket(ipfix_msg);
+    data->int_var++;
+    data->uns_var++;
+    printf("IPFIX Packet processed [%d]\n",data->int_var);
+    data->mib_lock.clear(std::memory_order_release);
+
     data->stats->pkt_counter++;
 
     ipx_ctx_msg_pass(ctx, msg);
