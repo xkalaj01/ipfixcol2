@@ -51,10 +51,10 @@ add_library(statistics-intermediate MODULE
         src/statistics.cpp
         src/map.h
         src/map.cpp
-        src/services.h
+        src/interface.h
         src/snmp/snmp.cpp
         src/snmp/mib.h
-        src/snmp/mib.cpp)
+        src/snmp/mib.cpp src/interface.cpp src/service.h src/snmp/snmp.h)
 
 target_link_libraries( statistics-intermediate
 #        ${FDS_LIBRARIES}              # libfds

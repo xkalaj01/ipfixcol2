@@ -2,9 +2,10 @@
 // Created by root on 11.12.18.
 //
 #include <iostream>
-#include "../services.h"
+#include "../interface.h"
 #include "../map.h"
 #include "mib.h"
+#include "snmp.h"
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
 #include <net-snmp/agent/net-snmp-agent-includes.h>
@@ -12,7 +13,8 @@
 #include <sys/types.h>
 #include <atomic>
 
-void snmp_agent(struct Instance *data){
+
+void SNMPService::worker() {
     int agentx_subagent=1;  /* change this if you want to be a SNMP master agent <-- can be in configuration file */
     int background = 0;     /* change this if you want to run in the background <-- can be in configuration file */
     int syslog = 0;         /* change this if you want to use syslog <-- can be in configuration file */
@@ -40,11 +42,12 @@ void snmp_agent(struct Instance *data){
     init_agent("ipfixcol2-demon");
 
     /* initialize mib code here */
-    init_mib_internals();
+    uint num1 = 42;
+    int num2 =24;
+    mib.registerMIB(&num1, &num2);
 
     /* mib code: init_nstAgentSubagentObject from nstAgentSubagentObject.C */
-//    variables_init(stats);
-    data->mib->registerMIB(&data->uns_var, &data->int_var);
+//    data->mib->registerMIB(&data->uns_var, &data->int_var);
 
     /* initialize vacm/usm access control  */
 //    if (!agentx_subagent) {
@@ -67,25 +70,39 @@ void snmp_agent(struct Instance *data){
     int ready;
     struct timeval timeout;
     /* your main loop here... */
-    while(!data->snmp_kill) {
+//    while(!data->snmp_kill) {
+    while(!this->kill_me){
         // Wait for incoming SNMP requests
+        std::cout<<"Waiting for SNMP request"<<std::endl;
         snmp_select_info(&numfds, &read_fd, &timeout, &block);
         select(numfds, &read_fd, NULL, NULL, NULL);
 
         // spinlock
-        while (data->mib_lock.test_and_set(std::memory_order_acquire));
+//        while (data->mib_lock.test_and_set(std::memory_order_acquire));
         printf("+SPINLOCK LOCKED IN DEMON\n");
         // Dispatch all requests waiting to be processed
         while (agent_check_and_process(0)){
             printf("SNMP request dispatched\n");
         }
         printf("-SPINLOCK UNLOCKED IN DEMON\n");
-        data->mib_lock.clear(std::memory_order_release);
+//        data->mib_lock.clear(std::memory_order_release);
     }
-
-    /* at shutdown time */
-    snmp_shutdown("ipfixcol2-demon");
-    printf("Shutting down ipfixcol2-snmp demon\n");
-    SOCK_CLEANUP;
-
 }
+
+SNMPService::~SNMPService() {
+    this->kill_me = 1;
+    this->thread.join();
+}
+
+void SNMPService::run() {
+    this->thread = std::thread(&SNMPService::worker, this);
+}
+
+void SNMPService::on_notify() {
+    this->mib.TransportSessionTable_update(this->storage);
+}
+
+SNMPService::SNMPService(std::map<std::pair<std::string, int>, sessionTableEntry> *storage) : StatisticsService(storage) {}
+
+
+

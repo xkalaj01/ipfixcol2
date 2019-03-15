@@ -42,7 +42,7 @@
 #include <ipfixcol2.h>
 #include <bits/unique_ptr.h>
 #include "map.h"
-#include "services.h"
+#include "interface.h"
 #include <thread>
 //#include <ipfixcol2/message_ipfix.h>
 #include "../../../../src/core/message_ipfix.h"
@@ -64,6 +64,10 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
         "2.0.0"
 };
 
+/** Instance */
+struct Instance {
+    StatisticsInterface interface;
+};
 
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
@@ -78,15 +82,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         std::unique_ptr<MIBBase> mibClass(new MIBBase);
 
         data = ptr.release();
-        data->stats = map.release();
-        data->snmp_kill = 0;
-        data->int_var = 0;
-        data->uns_var = 0;
-        data->mib = mibClass.release();
-        data->stats->pkt_counter=0;
-
-        std::unique_ptr<std::thread> s(new std::thread(snmp_agent, data));
-        data->services.push_back(s.release());
+        data->interface.Start();
     }
     catch (...){
         IPX_CTX_ERROR(ctx, "Exception has occured in Statistics module - Init",'\0');
@@ -104,14 +100,7 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
     (void) ctx;
 
     struct Instance *data = reinterpret_cast<Instance *>(cfg);
-    delete data->stats;
-    data->snmp_kill = 1;
 
-    std::vector<std::thread*>::iterator it;
-    for (it = data->services.begin(); it != data->services.end(); it++){
-        (*(*it)).join();
-        delete *it;
-    }
     delete data;
 }
 
@@ -122,14 +111,14 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
     struct Instance *data = reinterpret_cast<Instance *>(cfg);
     ipx_msg_ipfix_t *ipfix_msg = ipx_msg_base2ipfix(msg);
 
-    while(data->mib_lock.test_and_set(std::memory_order_acquire));
-    data->mib->processPacket(ipfix_msg);
-    data->int_var++;
-    data->uns_var++;
-    printf("IPFIX Packet processed [%d]\n",data->int_var);
-    data->mib_lock.clear(std::memory_order_release);
+//    while(data->mib_lock.test_and_set(std::memory_order_acquire));
+//    data->mib->processPacket(ipfix_msg);
+//    data->int_var++;
+//    data->uns_var++;
+//    data->mib_lock.clear(std::memory_order_release);
 
-    data->stats->pkt_counter++;
+//    data->stats->pkt_counter++;
+    data->interface.processPacket(ipfix_msg);
 
     ipx_ctx_msg_pass(ctx, msg);
     return IPX_OK;
