@@ -49,12 +49,26 @@ include_directories(
 # Create a linkable module
 add_library(statistics-intermediate MODULE
         src/statistics.cpp
-        src/map.h
-        src/map.cpp
         src/interface.h
         src/snmp/snmp.cpp
-        src/snmp/mib.h
-        src/snmp/mib.cpp src/interface.cpp src/service.h src/snmp/snmp.h)
+        src/interface.cpp
+        src/service.h
+        src/snmp/snmp.h
+        src/storage.cpp
+        src/storage.h
+
+        src/snmp/mib_tables/ipfixTransportSessionTable.cpp
+        src/snmp/mib_tables/ipfixTemplateTable.cpp
+        src/snmp/mib_tables/ipfixTemplateDefinitionTable.cpp
+        src/snmp/mib_tables/ipfixTransportSessionStatsTable.cpp
+        src/snmp/mib_tables/ipfixTemplateStatsTable.cpp
+
+        src/snmp/mib_tables/ipfixTransportSessionTable.h
+        src/snmp/mib_tables/ipfixTemplateTable.h
+        src/snmp/mib_tables/ipfixTemplateDefinitionTable.h
+        src/snmp/mib_tables/ipfixTransportSessionStatsTable.h
+        src/snmp/mib_tables/ipfixTemplateStatsTable.h
+        )
 
 target_link_libraries( statistics-intermediate
 #        ${FDS_LIBRARIES}              # libfds

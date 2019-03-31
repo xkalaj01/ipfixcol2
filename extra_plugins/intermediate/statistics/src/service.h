@@ -13,13 +13,11 @@ struct sessionTableEntry;
  */
 class StatisticsService{
 public:
-    StatisticsService(std::map<std::pair<std::string, int>, sessionTableEntry> *storage) : storage(storage) {}
-
     virtual ~StatisticsService() {};
 
     virtual void on_notify() = 0;
     virtual void run() = 0;
-    std::map<std::pair<std::string, int>, sessionTableEntry> *storage;
+    virtual void destroy() = 0;
 };
 
 #endif //STATISTICS_SERVICE_H

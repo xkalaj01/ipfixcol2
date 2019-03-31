@@ -7,51 +7,22 @@
 
 #include <atomic>
 #include <thread>
-#include "map.h"
-#include "snmp/mib.h"
+#include <vector>
 #include "service.h"
-
-#define DEVICE_MODE_COLLECTING 2
-#define TRANSPORT_SESSION_ACTIVE 2
-
-struct sessionTableEntry{
-    uint id;
-    fds_session_type Protocol;
-    uint SourceAddressType;
-    union {
-        in_addr IPv4;
-        in6_addr IPv6;
-    }SourceAddress;
-    uint DestAddressType;
-    union {
-        in_addr DestIPv4;
-        in6_addr DestIPv6;
-    }DestAddress;
-    uint SourcePort;
-    uint DestPort;
-    uint SctpAssocId;
-    uint DeviceMode;
-    uint TemplateRefreshTimeout;
-    uint OptionsTemplateRefreshTimeout;
-    uint IPFIXversion;
-    uint Status;
-};
-
+#include "storage.h"
 
 class StatisticsInterface{
 public:
-    StatisticsInterface();
-
-    virtual ~StatisticsInterface();
+    StatisticsInterface(Storage *storage);
 
     void Start();
-    void processPacket(ipx_msg_ipfix_t *msg);
-    std::map<std::pair<std::string, int>, sessionTableEntry> storage;
-    int counter = 0;
+    void Stop();
+
     bool kill_me = 0;
 private:
+    Storage *storage;
     void Worker();
-    uint exporter_counter;
+
     std::thread thread;
     std::vector<StatisticsService *> services;
 };

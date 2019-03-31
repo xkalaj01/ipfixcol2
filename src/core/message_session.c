@@ -71,7 +71,7 @@ ipx_msg_session_create(const struct ipx_session *session, enum ipx_msg_session_e
     assert(session != NULL);
     struct ipx_msg_session *msg;
 
-    msg = malloc(sizeof(*msg));
+    msg =(struct ipx_msg_session *) malloc(sizeof(*msg));
     if (!msg) {
         return NULL;
     }
