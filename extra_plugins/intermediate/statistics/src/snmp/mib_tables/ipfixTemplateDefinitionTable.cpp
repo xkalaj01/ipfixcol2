@@ -43,7 +43,7 @@ initialize_table_ipfixTemplateDefinitionTable(TemplateDefinitionTable_t *storage
                                   ipfixTemplateDefinitionTable_oid, ipfixTemplateDefinitionTable_oid_len);
 
     // Creating data for cache to read while reloading MIB
-    data = static_cast<cache_data *>(malloc(sizeof(data)));
+    data = static_cast<cache_data *>(malloc(sizeof(struct cache_data)));
     data->table = table_data;
     data->storage = storage;
 
@@ -80,15 +80,15 @@ initialize_table_ipfixTemplateDefinitionTable(TemplateDefinitionTable_t *storage
 /* create a new row in the table */
 netsnmp_tdata_row *
 ipfixTemplateDefinitionTable_createEntry(netsnmp_tdata *table_data
-                 , u_long  ipfixTransportSessionIndex
-                 , u_long  ipfixTemplateObservationDomainId
-                 , u_long  ipfixTemplateId
-                 , u_long  ipfixTemplateDefinitionIndex
+                 , uint32_t  ipfixTransportSessionIndex
+                 , uint32_t  ipfixTemplateObservationDomainId
+                 , uint32_t  ipfixTemplateId
+                 , uint32_t  ipfixTemplateDefinitionIndex
                 ) {
     TemplateDefinitionEntry_t *entry;
     netsnmp_tdata_row *row;
 
-    entry = SNMP_MALLOC_TYPEDEF( TemplateDefinitionEntry_t);
+    entry = SNMP_MALLOC_TYPEDEF(TemplateDefinitionEntry_t);
     if (!entry)
         return NULL;
 
@@ -99,7 +99,7 @@ ipfixTemplateDefinitionTable_createEntry(netsnmp_tdata *table_data
     }
     row->data = entry;
 
-    DEBUGMSGT(("ipfixTemplateDefinitionTable:entry:create", "row 0x%x\n", (uintptr_t)row));
+    DEBUGMSGT(("ipfixTemplateDefinitionTable:entry:create", "row 0x%lu\n", (uintptr_t)row));
     entry->TransportSessionIndex = ipfixTransportSessionIndex;
     netsnmp_tdata_row_add_index( row, ASN_UNSIGNED,
                                  &(entry->TransportSessionIndex),
@@ -130,7 +130,7 @@ ipfixTemplateDefinitionTable_removeEntry(netsnmp_tdata     *table_data,
     if (!row)
         return;    /* Nothing to remove */
 
-    DEBUGMSGT(("ipfixTemplateDefinitionTable:entry:remove", "row 0x%x\n", (uintptr_t)row));
+    DEBUGMSGT(("ipfixTemplateDefinitionTable:entry:remove", "row 0x%lu\n", (uintptr_t)row));
 
     entry = ( TemplateDefinitionEntry_t *)row->data;
     SNMP_FREE( entry );
@@ -144,6 +144,7 @@ ipfixTemplateDefinitionTable_removeEntry(netsnmp_tdata     *table_data,
 /* Example cache handling - set up table_data list from a suitable file */
 int
 ipfixTemplateDefinitionTable_load( netsnmp_cache *cache, void *vmagic ) {
+    (void) cache;
     netsnmp_tdata               *table;
     netsnmp_tdata_row           *row;
     TemplateDefinitionEntry_t   *mib_row;
@@ -179,7 +180,7 @@ ipfixTemplateDefinitionTable_free( netsnmp_cache *cache, void *vmagic ) {
     netsnmp_tdata_row *row;
 
     while ((row = netsnmp_tdata_row_first(table))) {
-        netsnmp_tdata_remove_and_delete_row(table, row);
+        ipfixTemplateDefinitionTable_removeEntry(table, row);
     }
 }
 

@@ -5,7 +5,7 @@
 #ifndef IPFIXTEMPLATEDEFINITIONTABLE_H
 #define IPFIXTEMPLATEDEFINITIONTABLE_H
 
-#include "../../storage.h"
+#include "../../Storage.h"
 
 /* function declarations */
 void initialize_table_ipfixTemplateDefinitionTable(TemplateDefinitionTable_t *storage, uint data_timeout);

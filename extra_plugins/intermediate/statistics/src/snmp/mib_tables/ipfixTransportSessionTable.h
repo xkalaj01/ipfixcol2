@@ -5,7 +5,7 @@
 #ifndef IPFIXTRANSPORTSESSIONTABLE_H
 #define IPFIXTRANSPORTSESSIONTABLE_H
 
-#include "../../storage.h"
+#include "../../Storage.h"
 
 /* function declarations */
 void initialize_table_ipfixTransportSessionTable(TransportSessionTable_t *storage, uint data_timeout);

@@ -1,11 +1,11 @@
 /**
- * \file src/plugins/intermediate/statistics.cpp
+ * \file Statistics.cpp
  * \author Jan Kala <xkalaj01@stud.fit.vutbr.cz>
- * \brief Module for collecting and shaaring operational statistics
- * \date 2018
+ * \brief Module for collecting and exporting operational statistics
+ * \date 2019
  */
 
-/* Copyright (C) 2018 CESNET, z.s.p.o.
+/* Copyright (C) 2019 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,10 +41,11 @@
 
 #include <ipfixcol2.h>
 #include <bits/unique_ptr.h>
-#include "interface.h"
+#include "Interface.h"
 #include <thread>
-//#include <ipfixcol2/message_ipfix.h>
+#include <iostream>
 #include "../../../../src/core/message_ipfix.h"
+#include "Config.h"
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
@@ -62,9 +63,13 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
         "2.0.0"
 };
 
-/** Instance */
+/** Statistics instance data                                */
 struct Instance {
+    /** Configuration for whole module                      */
+    Config *config;
+    /** Interface for output sub-modules management         */
     StatisticsInterface *interface;
+    /** Storage of operational statistics                   */
     Storage *storage;
 };
 
@@ -77,12 +82,14 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
     struct Instance *data = nullptr;
     try{
         std::unique_ptr<Instance> ptr(new Instance);
-        std::unique_ptr<Storage> storage_ptr(new Storage);
-        std::unique_ptr<StatisticsInterface> interface_ptr(new StatisticsInterface(storage_ptr.get()));
+        std::unique_ptr<Config> config(new Config(params));
+        std::unique_ptr<Storage> storage(new Storage(config.get()));
+        std::unique_ptr<StatisticsInterface> interface(new StatisticsInterface(storage.get(), config.get()));
 
         data = ptr.release();
-        data->storage = storage_ptr.release();
-        data->interface = interface_ptr.release();
+        data->config = config.release();
+        data->storage = storage.release();
+        data->interface = interface.release();
         data->interface->Start();
     }
     catch (...){
@@ -90,6 +97,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         return IPX_ERR_DENIED;
     }
 
+    // Subscribe to recieve session messages
     ipx_ctx_private_set(ctx, data);
     ipx_msg_mask_t mask = IPX_MSG_IPFIX|IPX_MSG_SESSION;
     ipx_ctx_subscribe(ctx, &mask, nullptr);
@@ -101,9 +109,10 @@ void
 ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
 {
     (void) ctx;
-
     struct Instance *data = reinterpret_cast<Instance *>(cfg);
-    data->interface->Stop();
+    delete data->interface;
+    delete data->config;
+    delete data->storage;
     delete data;
 }
 
@@ -111,7 +120,9 @@ int
 ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
 {
     struct Instance *data = reinterpret_cast<Instance *>(cfg);
+    // Process IPFIX message in storage
     data->storage->process_message(msg);
     ipx_ctx_msg_pass(ctx, msg);
+
     return IPX_OK;
 }

@@ -48,14 +48,16 @@ include_directories(
 
 # Create a linkable module
 add_library(statistics-intermediate MODULE
-        src/statistics.cpp
-        src/interface.h
+        src/Statistics.cpp
+        src/Interface.h
         src/snmp/snmp.cpp
-        src/interface.cpp
-        src/service.h
+        src/Interface.cpp
+        src/Service.h
         src/snmp/snmp.h
-        src/storage.cpp
-        src/storage.h
+        src/Storage.cpp
+        src/Storage.h
+        src/Config.cpp
+        src/Config.h
 
         src/snmp/mib_tables/ipfixTransportSessionTable.cpp
         src/snmp/mib_tables/ipfixTemplateTable.cpp
@@ -83,19 +85,24 @@ install(
 )
 
 
-#if (ENABLE_DOC_MANPAGE)
+if (ENABLE_DOC_MANPAGE)
+    find_package(Rst2Man)
+    if (NOT RST2MAN_FOUND)
+        message(FATAL_ERROR "rst2man is not available. Install python-docutils or disable manual page generation (-DENABLE_DOC_MANPAGE=False)")
+    endif()
+
     # Build a manual page
- #   set(SRC_FILE "${CMAKE_CURRENT_SOURCE_DIR}/doc/ipfixcol2-anonymization-inter.7.rst")
-  #  set(DST_FILE "${CMAKE_CURRENT_BINARY_DIR}/ipfixcol2-anonymization-inter.7")
+    set(SRC_FILE "${CMAKE_CURRENT_SOURCE_DIR}/doc/ipfixcol2-statistics-inter.7.rst")
+    set(DST_FILE "${CMAKE_CURRENT_BINARY_DIR}/ipfixcol2-statistics-inter.7")
 
-   # add_custom_command(TARGET anonymization-intermediate PRE_BUILD
-    #    COMMAND ${RST2MAN_EXECUTABLE} --syntax-highlight=none ${SRC_FILE} ${DST_FILE}
-     #   DEPENDS ${SRC_FILE}
-      #  VERBATIM
-       # )
+    add_custom_command(TARGET statistics-intermediate PRE_BUILD
+        COMMAND ${RST2MAN_EXECUTABLE} --syntax-highlight=none ${SRC_FILE} ${DST_FILE}
+        DEPENDS ${SRC_FILE}
+        VERBATIM
+        )
 
-   # install(
-   #     FILES "${DST_FILE}"
-   #     DESTINATION "${INSTALL_DIR_MAN}/man7"
-   # )
-#endif()
+    install(
+        FILES "${DST_FILE}"
+        DESTINATION "${CMAKE_INSTALL_FULL_MANDIR}/man7"
+    )
+endif()

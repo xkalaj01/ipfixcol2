@@ -44,7 +44,7 @@ initialize_table_ipfixTemplateTable(TemplateTable_t *storage, uint data_timeout)
                                   ipfixTemplateTable_oid, ipfixTemplateTable_oid_len);
 
     // Creating data for cache to read while reloading MIB
-    data = static_cast<cache_data *>(malloc(sizeof(data)));
+    data = static_cast<cache_data *>(malloc(sizeof(struct cache_data )));
     data->table = table_data;
     data->storage = storage;
 
@@ -98,7 +98,7 @@ ipfixTemplateTable_createEntry(netsnmp_tdata *table_data
     }
     row->data = entry;
 
-    DEBUGMSGT(("ipfixTemplateTable:entry:create", "row 0x%x\n", (uintptr_t)row));
+    DEBUGMSGT(("ipfixTemplateTable:entry:create", "row 0x%lu\n", (uintptr_t)row));
     entry->TransportSessionIndex = ipfixTransportSessionIndex;
     netsnmp_tdata_row_add_index( row, ASN_UNSIGNED,
                                  &(entry->TransportSessionIndex),
@@ -125,7 +125,7 @@ ipfixTemplateTable_removeEntry(netsnmp_tdata     *table_data,
     if (!row)
         return;    /* Nothing to remove */
 
-    DEBUGMSGT(("ipfixTemplateTable:entry:remove", "row 0x%x\n", (uintptr_t)row));
+    DEBUGMSGT(("ipfixTemplateTable:entry:remove", "row 0x%lu\n", (uintptr_t)row));
 
     entry = (TemplateEntry_t *)row->data;
     SNMP_FREE( entry );
@@ -168,6 +168,7 @@ ipfixTemplateTable_load( netsnmp_cache *cache, void *vmagic ) {
 
 void
 ipfixTemplateTable_free( netsnmp_cache *cache, void *vmagic ) {
+    (void)cache;
     struct cache_data *data = (struct cache_data*) vmagic;
     netsnmp_tdata     *table = data->table;
     netsnmp_tdata_row *row;
@@ -194,7 +195,6 @@ ipfixTemplateTable_handler(
     unsigned char               time_out[11];
     struct tm                  time_info;
     time_t time_helper;
-    char buf[80];
 
     DEBUGMSGTL(("ipfixTemplateTable:handler", "Processing request (%d)\n", reqinfo->mode));
 

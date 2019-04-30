@@ -43,7 +43,7 @@ initialize_table_ipfixTransportSessionStatsTable(TransportSessionStatsTable_t *s
                                   ipfixTransportSessionStatsTable_oid, ipfixTransportSessionStatsTable_oid_len);
 
     // Creating data for cache to read while reloading MIB
-    data = static_cast<cache_data *>(malloc(sizeof(data)));
+    data = static_cast<cache_data *>(malloc(sizeof(struct cache_data )));
     data->table = table_data;
     data->storage = storage;
 
@@ -93,7 +93,7 @@ ipfixTransportSessionStatsTable_createEntry(netsnmp_tdata *table_data
     }
     row->data = entry;
 
-    DEBUGMSGT(("ipfixTransportSessionStatsTable:entry:create", "row 0x%x\n", (uintptr_t)row));
+    DEBUGMSGT(("ipfixTransportSessionStatsTable:entry:create", "row 0x%lu\n", (uintptr_t)row));
     entry->TransportSessionIndex = ipfixTransportSessionIndex;
     netsnmp_tdata_row_add_index( row, ASN_UNSIGNED,
                                  &(entry->TransportSessionIndex),
@@ -112,7 +112,7 @@ ipfixTransportSessionStatsTable_removeEntry(netsnmp_tdata     *table_data,
     if (!row)
         return;    /* Nothing to remove */
 
-    DEBUGMSGT(("ipfixTransportSessionStatsTable:entry:remove", "row 0x%x\n", (uintptr_t)row));
+    DEBUGMSGT(("ipfixTransportSessionStatsTable:entry:remove", "row 0x%lu\n", (uintptr_t)row));
 
     entry = (struct ipfixTransportSessionStatsTable_entry *)row->data;
     SNMP_FREE( entry );   /* XXX - release any other internal resources */
