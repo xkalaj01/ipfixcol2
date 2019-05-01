@@ -32,52 +32,54 @@ installed on your system:
 - `Net-SNMP <http://www.net-snmp.org/>`_
 
 Installation of the Net-SNMP library and snmpd demon can be done using this approach:
-1. Download latest version of Net-SNMP from `Net-SNMP download page <http://www.net-snmp.org/download.html>`_.
-Minimal version should be 5.8. Lower versions were not tested for this module.
 
-#. Before we proceed with installation, make sure you have dependencies for Net-SNMP library. Main one is
-Perl development package which can be installed with this command
+#.  Download latest version of Net-SNMP from `Net-SNMP download page <http://www.net-snmp.org/download.html>`_.
+    Minimal version should be 5.8. Lower versions were not tested for this module.
 
-.. code-block:: sh
+#.  Before we proceed with installation, make sure you have dependencies for Net-SNMP library. 
+    Main one is Perl development package which can be installed with this command
 
-    $ sudo apt-get install libperl-dev
+    .. code-block:: sh
 
-#. After Net-SNMP dependencies are met, decompress the downloaded .tar.gz file
+        $ sudo apt-get install libperl-dev
 
-.. code-block:: sh
+#.  After Net-SNMP dependencies are met, decompress the downloaded .tar.gz file
 
-    $ tar -xvzf net-snmp-5.8.tar.gz
+    .. code-block:: sh
 
-#. Navigate to the folder with uncompressed files and run configuration script.
-You will be prompted to provide some configuration information, which u can set as you need.
+        $ tar -xvzf net-snmp-5.8.tar.gz
 
-.. code-block:: sh
+#.  Navigate to the folder with uncompressed files and run configuration script. 
+    You will be prompted to provide some configuration information, which u can set as you need.
 
-    $ cd net-snmp-5.8/
-    $ sudo ./configure
+    .. code-block:: sh
 
-#. When you will be done with configuration, you will see overview of entered configuration which is
-saved in snmpd.conf file. Then you can compile the library and install it.
+        $ cd net-snmp-5.8/
+        $ sudo ./configure
 
-.. code-block:: sh
+#.  When you will be done with configuration, 
+    you will see overview of entered configuration which is
+    saved in snmpd.conf file. Then you can compile the library and install it.
 
-    $ sudo make
-    $ sudo make install
+    .. code-block:: sh
 
-#. You can verify successful installation by entering next command and you should see version of Net-SNMP library.
+        $ sudo make
+        $ sudo make install
 
-.. code-block:: sh
+#.  You can verify successful installation by entering next command and you should see version of Net-SNMP library.
 
-    $ snmpget --version
-    # NET-SNMP version: 5.8
+    .. code-block:: sh
 
-#. Last thing missing is the snmp service. That can be installed by entering command. After installation
-start the service.
+        $ snmpget --version
+        # NET-SNMP version: 5.8
 
-.. code-block:: sh
+#.  Last thing missing is the snmp service. That can be installed by entering command. 
+    After installation start the service.
 
-    $ sudo apt-get install snmpd
-    $ sudo service snmpd start
+    .. code-block:: sh
+
+        $ sudo apt-get install snmpd
+        $ sudo service snmpd start
 
 
 Finally, compile and install the plugin:
@@ -93,22 +95,22 @@ Example configuration
 ---------------------
 .. code-block:: xml
 
-<intermediate>
-    <name>Collector stats</name>
-    <plugin>statistics</plugin>
-    <params>
-        <sessionActivityTimeout>20</sessionActivityTimeout>
-        <outputs>
-          <snmp>
-            <cacheTimeout table="ipfixTransportSessionTable">10</cacheTimeout>
-            <cacheTimeout table="ipfixTemplateTable">5</cacheTimeout>
-            <cacheTimeout table="ipfixTemplateDefinitionTable">5</cacheTimeout>
-            <cacheTimeout table="ipfixTransportSessionStatsTable">1</cacheTimeout>
-            <cacheTimeout table="ipfixTemplateStatsTable">5</cacheTimeout>
-          </snmp>
-        </outputs>
-    </params>
-</intermediate>
+    <intermediate>
+        <name>Collector stats</name>
+        <plugin>statistics</plugin>
+        <params>
+            <sessionActivityTimeout>20</sessionActivityTimeout>
+            <outputs>
+            <snmp>
+                <cacheTimeout table="ipfixTransportSessionTable">10</cacheTimeout>
+                <cacheTimeout table="ipfixTemplateTable">5</cacheTimeout>
+                <cacheTimeout table="ipfixTemplateDefinitionTable">5</cacheTimeout>
+                <cacheTimeout table="ipfixTransportSessionStatsTable">1</cacheTimeout>
+                <cacheTimeout table="ipfixTemplateStatsTable">5</cacheTimeout>
+            </snmp>
+            </outputs>
+        </params>
+    </intermediate>
 
 Parameters
 ----------
@@ -127,8 +129,8 @@ Parameters
         which is initialized with default values
 
         :``timeout``:
-        Timeout of cache expiration for MIB tables. Name of the table must be specified in ``table`` argument.
-        Value can be only positive integer. [default:1]
+            Timeout of cache expiration for MIB tables. Name of the table must be specified in ``table`` argument.
+            Value can be only positive integer. [default:1]
 
 Notes
 -----
