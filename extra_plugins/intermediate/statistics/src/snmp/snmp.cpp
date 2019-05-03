@@ -12,8 +12,6 @@
 #include <sys/types.h>
 #include <atomic>
 #include <csignal>
-#include <asm/ioctls.h>
-#include <stropts.h>
 
 SNMPService::SNMPService(Storage *storage, Config *config) {
     this->storage = storage;
