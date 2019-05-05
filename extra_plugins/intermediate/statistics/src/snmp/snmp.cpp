@@ -9,6 +9,7 @@
 #include <net-snmp/net-snmp-includes.h>
 #include <net-snmp/agent/net-snmp-agent-includes.h>
 #include <net-snmp/config_api.h>
+#include <net-snmp/session_api.h>
 #include <sys/types.h>
 #include <atomic>
 #include <csignal>
@@ -21,13 +22,20 @@ SNMPService::SNMPService(Storage *storage, Config *config) {
 void SNMPService::worker() {
 
     // make this a client of agentx
-    netsnmp_ds_set_boolean(NETSNMP_DS_APPLICATION_ID, NETSNMP_DS_AGENT_ROLE, 1);
+    if (netsnmp_ds_set_boolean(NETSNMP_DS_APPLICATION_ID, NETSNMP_DS_AGENT_ROLE, 1)!=0){
+        initialized = false;
+        kill_me = true;
+        return;
+    };
 
     /* initialize tcpip, if necessary */
     SOCK_STARTUP;
 
     // Initialize sub-agent
-    init_agent("ipfixcol2-demon");
+    if (init_agent("ipfixcol2-demon") != 0){
+        initialized = false;
+        kill_me = true;
+    }
 
     cfg_snmp *cfg = config->outputs.snmp;
     // Register MIB structure to NetSNMP library
@@ -45,12 +53,26 @@ void SNMPService::worker() {
     // Initialize demon
     init_snmp("ipfixcol2-demon");
 
+    // check connection to the master agent
+    const char * agentx_socket = netsnmp_ds_get_string(NETSNMP_DS_APPLICATION_ID, NETSNMP_DS_AGENT_X_SOCKET);
+    netsnmp_transport *t = netsnmp_transport_open_client("agentx", agentx_socket);
+    if (t == NULL){
+        initialized = false;
+        kill_me = true;
+    } else{
+        initialized = true;
+    }
+
     fd_set read_fd;
     FD_ZERO(&read_fd);
-    int numfds;
-    int block;
+    int numfds = 0;
+    int block = 0;
     struct timeval timeout;
+    timeout.tv_usec = 0;
+    timeout.tv_sec = 0;
 
+    // Signal, that the thread is done with initialization
+    init_wait = true;
 
     // Main loop of thread for dispatching processes
     while(!kill_me){
@@ -69,28 +91,39 @@ void SNMPService::worker() {
     // cleanup
     close(termination_fd[0]);
     snmp_shutdown("ipfixcol2-demon");
+    netsnmp_transport_free(t);
     SOCK_CLEANUP;
 }
 
 void SNMPService::run() {
+    // Create pipe for thread termination
     if (pipe(termination_fd) == -1){
         throw std::runtime_error("Failed to create pipe in SNMP module!");
     }
+
+    // Start thread and wait for it to be initialized
     thread = std::thread(&SNMPService::worker, this);
+    while(!init_wait);
+
+    // check successful initialization
+    if (!initialized){
+        throw std::runtime_error("Failed to initialize SNMP module. Is the snmpd running as master AgentX?");
+    }
 }
 
 
 
 SNMPService::~SNMPService() {
+    // Kill thread
     kill_me = true;
-
     write(termination_fd[1], "END", 3);
 
+    // Join thread
     if (thread.joinable()){
         thread.join();
     }
+    // close pipe
     close(termination_fd[1]);
-
 }
 
 

@@ -48,13 +48,14 @@
 #include <memory>
 
 StatisticsInterface::~StatisticsInterface() {
-    thread_cv.notify_all();
+    // Destruct all export services
     for (auto const &i: services){
         delete i;
     }
 }
 
 void StatisticsInterface::Start() {
+    // Start all export services
     for(auto const& service: services) {
         service->run();
     }
@@ -66,6 +67,7 @@ void StatisticsInterface::Worker() {
     std::chrono::seconds sec(1);
 
     while (thread_cv.wait_for(lock, sec) == std::cv_status::timeout){
+        // notify all export services
         for (auto const& s : services){
             s->on_notify();
         }

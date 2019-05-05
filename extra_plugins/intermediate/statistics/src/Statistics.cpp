@@ -92,6 +92,11 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         data->interface = interface.release();
         data->interface->Start();
     }
+    catch (const std::exception &ex){
+        IPX_CTX_ERROR(ctx, "Exception has occured in Statistics module - Init",'\0');
+        IPX_CTX_ERROR(ctx, ex.what());
+        return IPX_ERR_DENIED;
+    }
     catch (...){
         IPX_CTX_ERROR(ctx, "Exception has occured in Statistics module - Init",'\0');
         return IPX_ERR_DENIED;
@@ -110,6 +115,7 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
 {
     (void) ctx;
     struct Instance *data = reinterpret_cast<Instance *>(cfg);
+
     delete data->interface;
     delete data->config;
     delete data->storage;

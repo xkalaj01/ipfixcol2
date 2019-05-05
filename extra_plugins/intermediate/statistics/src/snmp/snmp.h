@@ -34,6 +34,9 @@ private:
     bool kill_me = false;
     int termination_fd[2];
 
+    bool initialized = false;
+    bool init_wait = false;
+
     Storage *storage;
     Config *config;
 };

@@ -31,56 +31,32 @@ installed on your system:
 
 - `Net-SNMP <http://www.net-snmp.org/>`_
 
-Installation of the Net-SNMP library and snmpd demon can be done using this approach:
+You can install necessary Net-SNMP packages using this command:
 
-#.  Download latest version of Net-SNMP from `Net-SNMP download page <http://www.net-snmp.org/download.html>`_.
-    Minimal version should be 5.8. Lower versions were not tested for this module.
+.. code-block:: sh
 
-#.  Before we proceed with installation, make sure you have dependencies for Net-SNMP library. 
-    Main one is Perl development package which can be installed with this command
+    # Ubuntu distributions
+    $ sudo apt-get install libsnmp-base libsnmp-dev snmpd
+    # Fedora distributions
+    $ sudo dnf install net-snmp net-snmp-dev
 
-    .. code-block:: sh
+After all dependencies are met, you NEED TO check AgentX settings in file /etc/snmp/snmpd.conf
+This file must contain line
 
-        $ sudo apt-get install libperl-dev
+.. code-block:: sh
 
-#.  After Net-SNMP dependencies are met, decompress the downloaded .tar.gz file
+    master agentx
 
-    .. code-block:: sh
+And the line must be uncommented (without # at the beginning of the line).
+After the changes, restart and check status of the snmpd service
 
-        $ tar -xvzf net-snmp-5.8.tar.gz
+.. code-block:: sh
 
-#.  Navigate to the folder with uncompressed files and run configuration script. 
-    You will be prompted to provide some configuration information, which u can set as you need.
+    $ sudo service snmpd restart
+    $ sudo service snmpd status
 
-    .. code-block:: sh
-
-        $ cd net-snmp-5.8/
-        $ sudo ./configure
-
-#.  When you will be done with configuration, 
-    you will see overview of entered configuration which is
-    saved in snmpd.conf file. Then you can compile the library and install it.
-
-    .. code-block:: sh
-
-        $ sudo make
-        $ sudo make install
-
-#.  You can verify successful installation by entering next command and you should see version of Net-SNMP library.
-
-    .. code-block:: sh
-
-        $ snmpget --version
-        # NET-SNMP version: 5.8
-
-#.  Last thing missing is the snmp service. That can be installed by entering command. 
-    After installation start the service.
-
-    .. code-block:: sh
-
-        $ sudo apt-get install snmpd
-        $ sudo service snmpd start
-
+You should see that the service is active and running and you should also see line
+"Turning on AgentX master support"
 
 Finally, compile and install the plugin:
 
