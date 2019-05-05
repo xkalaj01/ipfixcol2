@@ -37,17 +37,20 @@ You can install necessary Net-SNMP packages using this command:
 
     # Ubuntu distributions
     $ sudo apt-get install libsnmp-base libsnmp-dev snmpd
+
     # Fedora distributions
     $ sudo dnf install net-snmp net-snmp-dev
 
 After all dependencies are met, you NEED TO check AgentX settings in file /etc/snmp/snmpd.conf
-This file must contain line
+The file is generated automatically, but you can manually edit it or you can use snmpconfigure script,
+which will guide you through the configuration. After you will be done editing this file, check if the file
+contains following line (uncommented - without # at the beginning of the line)
 
 .. code-block:: sh
 
     master agentx
 
-And the line must be uncommented (without # at the beginning of the line).
+If not, append the line to the snmpd.conf file and proceed.
 After the changes, restart and check status of the snmpd service
 
 .. code-block:: sh
@@ -56,7 +59,7 @@ After the changes, restart and check status of the snmpd service
     $ sudo service snmpd status
 
 You should see that the service is active and running and you should also see line
-"Turning on AgentX master support"
+"Turning on AgentX master support". This means that the snmpd service is up and ready.
 
 Finally, compile and install the plugin:
 
@@ -110,5 +113,11 @@ Parameters
 
 Notes
 -----
+The snmp export module currently prints message
 
-Coming soon
+.. code-block:: sh
+
+    unknown snmp version 193
+
+This cosmetic issue doesn't affect the functionality of the module.
+It comes from the Net-SNMP library, which doesn't have straightforward solution for disabling this.

@@ -43,13 +43,13 @@ void SNMPService::worker() {
     initialize_table_ipfixTransportSessionTable(
             &storage->TransportSessionTable, static_cast<uint>(cfg->timeouts.TransportSessionTable));
     initialize_table_ipfixTransportSessionStatsTable(
-            &storage->TransportSessionStatsTable, static_cast<uint>(cfg->timeouts.TemplateTable));
+            &storage->TransportSessionStatsTable, static_cast<uint>(cfg->timeouts.TransportSessionStatsTable));
     initialize_table_ipfixTemplateTable(
-            &storage->TemplateTable, static_cast<uint>(cfg->timeouts.TemplateDefinitionTable));
+            &storage->TemplateTable, static_cast<uint>(cfg->timeouts.TemplateTable));
     initialize_table_ipfixTemplateStatsTable(
-            &storage->TemplateStatsTable, static_cast<uint>(cfg->timeouts.TransportSessionStatsTable));
+            &storage->TemplateStatsTable, static_cast<uint>(cfg->timeouts.TemplateStatsTable));
     initialize_table_ipfixTemplateDefinitionTable(
-            &storage->TemplateDefinitionTable, static_cast<uint>(cfg->timeouts.TemplateStatsTable));
+            &storage->TemplateDefinitionTable, static_cast<uint>(cfg->timeouts.TemplateDefinitionTable));
 
     // Initialize demon
     init_snmp("ipfixcol2-demon");
