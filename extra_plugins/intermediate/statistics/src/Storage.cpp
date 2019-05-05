@@ -313,19 +313,25 @@ int Storage::process_session_msg(ipx_msg_session_t *msg) {
             TransportSessionTable.erase(int_id);
             TransportSessionStatsTable.erase(int_id);
 
-            for (auto &i : TemplateTable){
-                if (i.second.TransportSessionIndex == int_id){
-                    TemplateTable.erase(i.first);
+            for (auto i = TemplateTable.begin(); i != TemplateTable.end(); ){
+                if (i->second.TransportSessionIndex == int_id){
+                    i = TemplateTable.erase(i);
+                } else{
+                    i++;
                 }
             }
-            for (auto &i : TemplateDefinitionTable){
-                if (i.second.TransportSessionIndex == int_id){
-                    TemplateDefinitionTable.erase(i.first);
+            for (auto i = TemplateDefinitionTable.begin(); i != TemplateDefinitionTable.end(); ){
+                if (i->second.TransportSessionIndex == int_id){
+                    i = TemplateDefinitionTable.erase(i);
+                } else {
+                    i++;
                 }
             }
-            for (auto &i : TemplateStatsTable){
-                if (i.second.TransportSessionIndex == int_id){
-                    TemplateStatsTable.erase(i.first);
+            for (auto i = TemplateStatsTable.begin(); i != TemplateStatsTable.end(); ){
+                if (i->second.TransportSessionIndex == int_id){
+                    i = TemplateStatsTable.erase(i);
+                } else {
+                    i++;
                 }
             }
             // Saving the ID into history of previously connected exporters
