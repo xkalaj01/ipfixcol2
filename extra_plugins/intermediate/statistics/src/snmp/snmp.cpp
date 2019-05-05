@@ -17,6 +17,7 @@
 SNMPService::SNMPService(Storage *storage, Config *config) {
     this->storage = storage;
     this->config = config;
+    init_mutex.lock();
 }
 
 void SNMPService::worker() {
@@ -72,7 +73,7 @@ void SNMPService::worker() {
     timeout.tv_sec = 0;
 
     // Signal, that the thread is done with initialization
-    init_wait = true;
+    init_mutex.unlock();
 
     // Main loop of thread for dispatching processes
     while(!kill_me){
@@ -103,7 +104,7 @@ void SNMPService::run() {
 
     // Start thread and wait for it to be initialized
     thread = std::thread(&SNMPService::worker, this);
-    while(!init_wait);
+    init_mutex.lock();
 
     // check successful initialization
     if (!initialized){

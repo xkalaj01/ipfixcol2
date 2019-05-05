@@ -35,7 +35,7 @@ private:
     int termination_fd[2];
 
     bool initialized = false;
-    bool init_wait = false;
+    std::mutex init_mutex;
 
     Storage *storage;
     Config *config;
