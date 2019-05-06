@@ -296,6 +296,7 @@ private:
     int process_session_msg(ipx_msg_session_t *msg);
     void check_and_set_discontinuity(uint64_t counter, uint64_t increment, time_t *discont_flag);
     std::string get_string_id(const ipx_session *session);
+    void session_metering();
 
     /** Counter of all sessions that collector has with exporters           */
     uint32_t exporter_counter;
@@ -303,15 +304,12 @@ private:
     Config *config;
     /** Condition variable for controlling statistics threads               */
     std::condition_variable stat_threads_cv;
-    /** Mutex for exclusive acces to condition variable                     */
+    /** Mutex for exclusive access to condition variable                    */
     std::mutex  stat_threads_mutex;
     /** Thread for updating rate in statistic table for transport sessions  */
-    std::thread rate_counter_thread;
-    /** Thread for updating activity status in transport session table      */
-    std::thread session_activity_thread;
+    std::thread metering_thread;
 
-    void stat_rate_updater();
-    void session_activity_updater();
+
 };
 
 

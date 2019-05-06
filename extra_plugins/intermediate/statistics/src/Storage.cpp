@@ -53,20 +53,16 @@ std::atomic_flag storage_lock = ATOMIC_FLAG_INIT;
 Storage::Storage(Config *config) {
     exporter_counter = 0;
     this->config = config;
-    // Starting statistics threads
-    rate_counter_thread = std::thread(&Storage::stat_rate_updater, this);
-    session_activity_thread = std::thread(&Storage:: session_activity_updater, this);
+    // Starting metering thread
+    metering_thread = std::thread(&Storage::session_metering, this);
 }
 
 Storage::~Storage() {
-    // Terminate all statistics threads
+    // Terminate metering thread
     stat_threads_cv.notify_all();
 
-    if (rate_counter_thread.joinable()){
-        rate_counter_thread.join();
-    }
-    if (session_activity_thread.joinable()){
-        session_activity_thread.join();
+    if (metering_thread.joinable()){
+        metering_thread.join();
     }
 }
 
@@ -359,13 +355,15 @@ void Storage::check_and_set_discontinuity(uint64_t counter, uint64_t increment, 
 }
 
 /**
- * \brief Function for thread rate_counter_thread.
+ * \brief Function for thread metering_thread.
  *
  * Loops through all saved sessions and updates rate value every second.
  * This is done by copying value from internal counter to MIB table structure, thus
  * the counter won't be steeply increasing every second.
+ * Also checks timestamps of all sessions and checks their activity. Marks inactive sessions
+ * based on specified/default timeout
  */
-void Storage::stat_rate_updater() {
+void Storage::session_metering() {
     std::unique_lock<std::mutex> lock(stat_threads_mutex);
 
     std::chrono::seconds sec(RATE_UPDATER_INTERVAL);
@@ -380,31 +378,9 @@ void Storage::stat_rate_updater() {
             // Copy counted bytes into MIB table
             TransportSessionStatsTable[it->second.TransportSessionTableId].Rate = it->second.RateCounter;
             it->second.RateCounter = 0;
-        }
-        storage_lock.clear(std::memory_order_release);
-    }
-}
 
-/**
- * \brief Function for thread session_activity_thread.
- *
- * Loops through all saved sessions and checks and sets their activity.
- * Thread sleeps for time specified in configuration. If the transport
- * session isn't active for the same time or longer, it is marked as inactive.
- */
-void Storage::session_activity_updater() {
-    std::unique_lock<std::mutex> lock(stat_threads_mutex);
-
-    std::chrono::seconds sec(config->session_activity_timeout);
-    // Main loop of thread
-    while (stat_threads_cv.wait_for(lock, sec) == std::cv_status::timeout){
-        std::map<std::string, struct ExporterInfo>::iterator it;
-
-        while(storage_lock.test_and_set(std::memory_order_acquire));
-        // Iterate over all active sessions
-        for ( it = active_exporters.begin(); it != active_exporters.end(); it++){
             if (difftime(time(nullptr), it->second.LastActive) >= config->session_activity_timeout){
-                // If the time of last activity and now is bigger than timeout - mark as INACTIVE
+                // If the dififference between time of last activity and time now is bigger than timeout - mark as INACTIVE
                 TransportSessionTable[it->second.TransportSessionTableId].Status = IPX_SESSIONSTATUS_INACTIVE;
             }else{
                 // Otherwise mark as ACTIVE
