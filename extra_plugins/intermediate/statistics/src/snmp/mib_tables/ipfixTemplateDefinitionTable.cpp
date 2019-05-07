@@ -165,7 +165,7 @@ ipfixTemplateDefinitionTable_load( netsnmp_cache *cache, void *vmagic ) {
         if (row == NULL)
             continue;
         mib_row = (TemplateDefinitionEntry_t *)row->data;
-        memcpy(mib_row, &it.second, sizeof(TemplateEntry_t));
+        memcpy(mib_row, &it.second, sizeof(TemplateDefinitionEntry_t));
         mib_row->valid = 1;
     }
     storage_lock.clear(std::memory_order_release);

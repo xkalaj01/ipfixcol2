@@ -1,4 +1,4 @@
-// SNMP demon, which initializes the MIB modules and dispatches SNMP messages
+// SNMP daemon, which initializes the MIB modules and dispatches SNMP messages
 // Created by root on 11.12.18.
 //
 #include <iostream>
@@ -33,7 +33,7 @@ void SNMPService::worker() {
     SOCK_STARTUP;
 
     // Initialize sub-agent
-    if (init_agent("ipfixcol2-demon") != 0){
+    if (init_agent("ipfixcol2-daemon") != 0){
         initialized = false;
         kill_me = true;
     }
@@ -51,8 +51,8 @@ void SNMPService::worker() {
     initialize_table_ipfixTemplateDefinitionTable(
             &storage->TemplateDefinitionTable, static_cast<uint>(cfg->timeouts.TemplateDefinitionTable));
 
-    // Initialize demon
-    init_snmp("ipfixcol2-demon");
+    // Initialize daemon
+    init_snmp("ipfixcol2-daemon");
 
     // check connection to the master agent
     const char * agentx_socket = netsnmp_ds_get_string(NETSNMP_DS_APPLICATION_ID, NETSNMP_DS_AGENT_X_SOCKET);
@@ -91,7 +91,7 @@ void SNMPService::worker() {
 
     // cleanup
     close(termination_fd[0]);
-    snmp_shutdown("ipfixcol2-demon");
+    snmp_shutdown("ipfixcol2-daemon");
     netsnmp_transport_free(t);
     SOCK_CLEANUP;
 }
