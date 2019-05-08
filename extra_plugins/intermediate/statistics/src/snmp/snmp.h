@@ -18,6 +18,8 @@
 #include "mib_tables/ipfixTemplateDefinitionTable.h"
 #include "../Config.h"
 
+struct table_caches;
+
 class SNMPService: public StatisticsService{
 public:
     explicit SNMPService(Storage *storage, Config *config);
@@ -29,6 +31,8 @@ public:
 
 private:
     void worker();
+
+    void free_internals(table_caches *caches);
 
     std::thread thread;
     bool kill_me = false;

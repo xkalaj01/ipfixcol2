@@ -9,22 +9,16 @@
 #include <iostream>
 #include "ipfixTemplateStatsTable.h"
 
-struct cache_data{
-    netsnmp_tdata               *table;
-    TemplateStatsTable_t        *storage;
-};
-
 /** Initialize the ipfixTemplateStatsTable table by defining its contents and how it's structured */
-void
+struct ipfixTemplateStats_cache_data *
 initialize_table_ipfixTemplateStatsTable(TemplateStatsTable_t *storage, uint data_timeout)
 {
     const oid ipfixTemplateStatsTable_oid[] = {1,3,6,1,2,1,193,1,2,2};
     const size_t ipfixTemplateStatsTable_oid_len   = OID_LENGTH(ipfixTemplateStatsTable_oid);
-    netsnmp_handler_registration    *reg;
-    netsnmp_tdata                   *table_data;
-    netsnmp_table_registration_info *table_info;
-    netsnmp_cache                   *cache;
-    struct cache_data               *data;
+    netsnmp_handler_registration        *reg;
+    netsnmp_tdata                       *table_data;
+    netsnmp_cache                       *cache;
+    ipfixTemplateStats_cache_data       *cache_data;
 
     DEBUGMSGTL(("ipfixTemplateStatsTable:init", "initializing table ipfixTemplateStatsTable\n"));
 
@@ -37,44 +31,46 @@ initialize_table_ipfixTemplateStatsTable(TemplateStatsTable_t *storage, uint dat
     table_data = netsnmp_tdata_create_table( "ipfixTemplateStatsTable", 0 );
     if (NULL == table_data) {
         snmp_log(LOG_ERR,"error creating tdata table for ipfixTemplateStatsTable\n");
-        return;
+        return NULL;
     }
     cache = netsnmp_cache_create(data_timeout,
                                   ipfixTemplateStatsTable_load, ipfixTemplateStatsTable_free,
                                   ipfixTemplateStatsTable_oid, ipfixTemplateStatsTable_oid_len);
 
     // Creating data for cache to read while reloading MIB
-    data = static_cast<cache_data *>(malloc(sizeof(struct cache_data )));
-    data->table = table_data;
-    data->storage = storage;
+    cache_data = static_cast<ipfixTemplateStats_cache_data *>(malloc(sizeof(ipfixTemplateStats_cache_data)));
+    cache_data->table = table_data;
+    cache_data->storage = storage;
 
     if (NULL == cache) {
         snmp_log(LOG_ERR,"error creating cache for ipfixTemplateStatsTable\n");
     }
     else{
         cache->flags = NETSNMP_CACHE_DONT_FREE_EXPIRED | NETSNMP_CACHE_AUTO_RELOAD;
-        cache->magic = (void *)data;
+        cache->magic = (void *)cache_data;
     }
-    table_info = SNMP_MALLOC_TYPEDEF( netsnmp_table_registration_info );
-    if (NULL == table_info) {
+    cache_data->table_info = SNMP_MALLOC_TYPEDEF( netsnmp_table_registration_info );
+    if (NULL == cache_data->table_info) {
         snmp_log(LOG_ERR,"error creating table info for ipfixTemplateStatsTable\n");
-        return;
+        return NULL;
     }
-    netsnmp_table_helper_add_indexes(table_info,
+    netsnmp_table_helper_add_indexes(cache_data->table_info,
                            ASN_UNSIGNED,  /* index: ipfixTransportSessionIndex */
                            ASN_UNSIGNED,  /* index: ipfixTemplateObservationDomainId */
                            ASN_UNSIGNED,  /* index: ipfixTemplateId */
                            0);
 
-    table_info->min_column = COLUMN_IPFIXTEMPLATE_DATARECORDS;
-    table_info->max_column = COLUMN_IPFIXTEMPLATE_DISCONTINUITYTIME;
+    cache_data->table_info->min_column = COLUMN_IPFIXTEMPLATE_DATARECORDS;
+    cache_data->table_info->max_column = COLUMN_IPFIXTEMPLATE_DISCONTINUITYTIME;
     
-    netsnmp_tdata_register( reg, table_data, table_info );
+    netsnmp_tdata_register( reg, table_data, cache_data->table_info );
     if (cache) 
         netsnmp_inject_handler_before( reg, netsnmp_cache_handler_get(cache),
                                        TABLE_TDATA_NAME);
 
     /* Initialise the contents of the table here */
+    cache_data->cache = cache;
+    return cache_data;
 }
 
 /* create a new row in the table */
@@ -140,12 +136,12 @@ ipfixTemplateStatsTable_removeEntry(netsnmp_tdata     *table_data,
 int
 ipfixTemplateStatsTable_load( netsnmp_cache *cache, void *vmagic ) {
     (void) cache;
-    netsnmp_tdata           *table;
-    netsnmp_tdata_row       *row;
-    TemplateStatsEntry_t    *mib_row;
-    struct cache_data       *data;
+    netsnmp_tdata                   *table;
+    netsnmp_tdata_row               *row;
+    TemplateStatsEntry_t            *mib_row;
+    ipfixTemplateStats_cache_data   *data;
 
-    data = static_cast<cache_data *>(vmagic);
+    data = static_cast<ipfixTemplateStats_cache_data *>(vmagic);
     table = data->table;
 
     while(storage_lock.test_and_set(std::memory_order_acquire));
@@ -169,9 +165,9 @@ ipfixTemplateStatsTable_load( netsnmp_cache *cache, void *vmagic ) {
 void
 ipfixTemplateStatsTable_free( netsnmp_cache *cache, void *vmagic ) {
     (void) cache;
-    struct cache_data *data = (struct cache_data*) vmagic;
-    netsnmp_tdata     *table = data->table;
-    netsnmp_tdata_row *row;
+    ipfixTemplateStats_cache_data   *data = (ipfixTemplateStats_cache_data *) vmagic;
+    netsnmp_tdata                   *table = data->table;
+    netsnmp_tdata_row               *row;
 
     while ((row = netsnmp_tdata_row_first(table))) {
         ipfixTemplateStatsTable_removeEntry(table, row);

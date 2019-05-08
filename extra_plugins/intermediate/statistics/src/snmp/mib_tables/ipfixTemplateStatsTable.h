@@ -7,8 +7,16 @@
 
 #include "../../Storage.h"
 
+struct ipfixTemplateStats_cache_data{
+    netsnmp_tdata                         *table;
+    TemplateStatsTable_t                  *storage;
+    netsnmp_table_registration_info       *table_info;
+    netsnmp_cache                         *cache;
+};
 /* function declarations */
-void initialize_table_ipfixTemplateStatsTable(TemplateStatsTable_t *storage, uint data_timeout);
+struct ipfixTemplateStats_cache_data *
+initialize_table_ipfixTemplateStatsTable(TemplateStatsTable_t *storage, uint data_timeout);
+
 Netsnmp_Node_Handler ipfixTemplateStatsTable_handler;
 NetsnmpCacheLoad ipfixTemplateStatsTable_load;
 NetsnmpCacheFree ipfixTemplateStatsTable_free;

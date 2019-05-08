@@ -7,8 +7,17 @@
 
 #include "../../Storage.h"
 
+struct ipfixTransportSession_cache_data{
+    netsnmp_tdata                         *table;
+    TransportSessionTable_t               *storage;
+    netsnmp_table_registration_info       *table_info;
+    netsnmp_cache                         *cache;
+};
+
 /* function declarations */
-void initialize_table_ipfixTransportSessionTable(TransportSessionTable_t *storage, uint data_timeout);
+struct ipfixTransportSession_cache_data *
+initialize_table_ipfixTransportSessionTable(TransportSessionTable_t *storage, uint data_timeout);
+
 Netsnmp_Node_Handler ipfixTransportSessionTable_handler;
 NetsnmpCacheLoad ipfixTransportSessionTable_load;
 NetsnmpCacheFree ipfixTransportSessionTable_free;

@@ -14,6 +14,14 @@
 #include <atomic>
 #include <csignal>
 
+struct table_caches{
+    ipfixTransportSession_cache_data    *TransportSession;
+    ipfixTransportSessionStats_cache_data *TransportSessionStats;
+    ipfixTemplateDefinition_cache_data  *TemplateDefinition;
+    ipfixTemplateStats_cache_data       *TemplateStats;
+    ipfixTemplate_cache_data            *Template;
+};
+
 SNMPService::SNMPService(Storage *storage, Config *config) {
     this->storage = storage;
     this->config = config;
@@ -21,6 +29,7 @@ SNMPService::SNMPService(Storage *storage, Config *config) {
 }
 
 void SNMPService::worker() {
+    table_caches caches{};
 
     // make this a client of agentx
     if (netsnmp_ds_set_boolean(NETSNMP_DS_APPLICATION_ID, NETSNMP_DS_AGENT_ROLE, 1)!=0){
@@ -40,15 +49,15 @@ void SNMPService::worker() {
 
     cfg_snmp *cfg = config->outputs.snmp;
     // Register MIB structure to NetSNMP library
-    initialize_table_ipfixTransportSessionTable(
+    caches.TransportSession = initialize_table_ipfixTransportSessionTable(
             &storage->TransportSessionTable, static_cast<uint>(cfg->timeouts.TransportSessionTable));
-    initialize_table_ipfixTransportSessionStatsTable(
+    caches.TransportSessionStats = initialize_table_ipfixTransportSessionStatsTable(
             &storage->TransportSessionStatsTable, static_cast<uint>(cfg->timeouts.TransportSessionStatsTable));
-    initialize_table_ipfixTemplateTable(
+    caches.Template = initialize_table_ipfixTemplateTable(
             &storage->TemplateTable, static_cast<uint>(cfg->timeouts.TemplateTable));
-    initialize_table_ipfixTemplateStatsTable(
+    caches.TemplateStats = initialize_table_ipfixTemplateStatsTable(
             &storage->TemplateStatsTable, static_cast<uint>(cfg->timeouts.TemplateStatsTable));
-    initialize_table_ipfixTemplateDefinitionTable(
+    caches.TemplateDefinition = initialize_table_ipfixTemplateDefinitionTable(
             &storage->TemplateDefinitionTable, static_cast<uint>(cfg->timeouts.TemplateDefinitionTable));
 
     // Initialize daemon
@@ -88,12 +97,13 @@ void SNMPService::worker() {
         // Dispatch all requests waiting to be processed
         while (agent_check_and_process(0));
     }
-
     // cleanup
     close(termination_fd[0]);
     snmp_shutdown("ipfixcol2-daemon");
     netsnmp_transport_free(t);
+    shutdown_agent();
     SOCK_CLEANUP;
+    free_internals(&caches);
 }
 
 void SNMPService::run() {
@@ -125,6 +135,56 @@ SNMPService::~SNMPService() {
     }
     // close pipe
     close(termination_fd[1]);
+}
+
+void SNMPService::free_internals(table_caches *caches) {
+    if (caches == NULL){
+        return;
+    }
+    if (caches->TemplateDefinition != NULL){
+        netsnmp_tdata_delete_table(caches->TemplateDefinition->table);
+        netsnmp_cache_remove(caches->TemplateDefinition->cache);
+        netsnmp_table_registration_info_free(caches->TemplateDefinition->table_info);
+        free(caches->TemplateDefinition->cache->rootoid);
+        free(caches->TemplateDefinition->cache);
+        free(caches->TemplateDefinition);
+    }
+
+    if (caches->TemplateStats != NULL){
+        netsnmp_tdata_delete_table(caches->TemplateStats->table);
+        netsnmp_cache_remove(caches->TemplateStats->cache);
+        netsnmp_table_registration_info_free(caches->TemplateStats->table_info);
+        free(caches->TemplateStats->cache->rootoid);
+        free(caches->TemplateStats->cache);
+        free(caches->TemplateStats);
+    }
+
+    if (caches->Template != NULL){
+        netsnmp_tdata_delete_table(caches->Template->table);
+        netsnmp_cache_remove(caches->Template->cache);
+        netsnmp_table_registration_info_free(caches->Template->table_info);
+        free(caches->Template->cache->rootoid);
+        free(caches->Template->cache);
+        free(caches->Template);
+    }
+
+    if (caches->TransportSessionStats != NULL){
+        netsnmp_tdata_delete_table(caches->TransportSessionStats->table);
+        netsnmp_cache_remove(caches->TransportSessionStats->cache);
+        netsnmp_table_registration_info_free(caches->TransportSessionStats->table_info);
+        free(caches->TransportSessionStats->cache->rootoid);
+        free(caches->TransportSessionStats->cache);
+        free(caches->TransportSessionStats);
+    }
+
+    if (caches->TransportSession != NULL){
+        netsnmp_tdata_delete_table(caches->TransportSession->table);
+        netsnmp_cache_remove(caches->TransportSession->cache);
+        netsnmp_table_registration_info_free(caches->TransportSession->table_info);
+        free(caches->TransportSession->cache->rootoid);
+        free(caches->TransportSession->cache);
+        free(caches->TransportSession);
+    }
 }
 
 

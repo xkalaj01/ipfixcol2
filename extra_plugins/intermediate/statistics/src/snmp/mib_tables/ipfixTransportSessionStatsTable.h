@@ -6,8 +6,17 @@
 #define IPFIXTRANSPORTSESSIONSTATSTABLE_H
 #include "../../Storage.h"
 
+struct ipfixTransportSessionStats_cache_data{
+    netsnmp_tdata                         *table;
+    TransportSessionStatsTable_t          *storage;
+    netsnmp_table_registration_info       *table_info;
+    netsnmp_cache                         *cache;
+};
+
 /* function declarations */
-void initialize_table_ipfixTransportSessionStatsTable(TransportSessionStatsTable_t *storage, uint data_timeout);
+struct ipfixTransportSessionStats_cache_data*
+initialize_table_ipfixTransportSessionStatsTable(TransportSessionStatsTable_t *storage, uint data_timeout);
+
 Netsnmp_Node_Handler ipfixTransportSessionStatsTable_handler;
 NetsnmpCacheLoad ipfixTransportSessionStatsTable_load;
 NetsnmpCacheFree ipfixTransportSessionStatsTable_free;
