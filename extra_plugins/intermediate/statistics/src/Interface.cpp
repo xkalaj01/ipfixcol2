@@ -43,7 +43,7 @@
 #include <ipfixcol2.h>
 #include "Interface.h"
 #include "snmp/snmp.h"
-#include "../../../../src/core/message_ipfix.h"
+#include <ipfixcol2/message_ipfix.h>
 #include "Config.h"
 #include <memory>
 
