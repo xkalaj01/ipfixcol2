@@ -2,17 +2,17 @@ Statistics (intermediate plugin)
 ===================================
 
 Intermediate plugin Statistics is intended to collect operational parameters, store them and provide
-way of their export. Data are stored in structures which are based on MIB module IPFIX-MIB, so most
+way of their export. Data are stored in structures which are based on MIB module IPFIX-MIB (RFC6615), so most
 of the elements included in this MIB module are implemented in the internal structures as well.
 
-Currently there is only one submodule that can be used for data export, which is SNMP submodule.
-This submodule uses Net-SNMP library, thus this library is needed to be installed for compilation
-of whole plugin. SNMP submodule uses snmpd-demon to receive and dispatch SNMP request, so snmp is
-also needed to be installed. After start the submodule registers to snmp-demon as AgentX, so there
+Currently there is only one submodule that can be used for data export, which is SNMP agent.
+This agent uses Net-SNMP library, thus this library is needed to be installed for compilation
+of whole plugin. SNMP agent uses snmpd service to receive and dispatch SNMP request, so snmpd is
+also needed to be installed. After start the agent registers to snmpd service through AgentX protocol, so there
 is no need to configure IP addresses or user accounts for SNMP communication inside of the plugin
-as the snmp-demon handles this itself.
+as the snmpd service handles this itself.
 
-Net-SNMP library offers cache mechanism, which is also implemented in SNMP submodule. Caches are used
+Net-SNMP library offers cache mechanism, which is also implemented in SNMP agent. Caches are used
 for storing information for export. These information are transferred from internal data structure
 every time the cache expires and new SNMP request appears. Timeout for cache expiration of each MIB
 table can be defined in configuration file. If you wish to get the most actual data from collector,
@@ -35,14 +35,14 @@ You can install necessary Net-SNMP packages using this command:
 
 .. code-block:: sh
 
-    # Ubuntu distributions
+    # Ubuntu/Debian distributions
     $ sudo apt-get install libsnmp-base libsnmp-dev snmpd
 
-    # Fedora distributions
-    $ sudo dnf install net-snmp net-snmp-dev
+    # Fedora/RHEL distributions
+    $ sudo dnf install net-snmp net-snmp-devel
 
 After all dependencies are met, you NEED TO check AgentX settings in file /etc/snmp/snmpd.conf
-The file is generated automatically, but you can manually edit it or you can use snmpconfigure script,
+The file is generated automatically, but you can manually edit it or you can use snmpconf script,
 which will guide you through the configuration. After you will be done editing this file, check if the file
 contains following line (uncommented - without # at the beginning of the line)
 
@@ -51,12 +51,34 @@ contains following line (uncommented - without # at the beginning of the line)
     master agentx
 
 If not, append the line to the snmpd.conf file and proceed.
-After the changes, restart and check status of the snmpd service
+
+Another change in the snmpd.conf file is user settings. The users can be also created through the
+snmpconf script. If you want to test the module or use it just from device, where the collector is running,
+adding this line should be enough for basic functionality.
 
 .. code-block:: sh
 
-    $ sudo service snmpd restart
-    $ sudo service snmpd status
+    rocommunity public 127.0.0.1
+
+If you change the localhost network address to other network or subnet, you can access the module
+via SNMP remotely, but it is recommended to use user accounts in SNMPv2c or SNMPv3 in sake of security.
+
+If you are planning to run collector without root privileges, you also need to check that snmpd.conf contains
+this line
+
+.. code-block:: sh
+
+    agentXPerms 777 777
+
+so SNMP agent in module can connect to the master agent. If the connection fails, whole ipfixcol2 won't start.
+
+After the changes to snmpd.conf, restart and check status of the snmpd service. Also, enable it to automatically
+start with the system, so you don't have to start it after reboot.
+
+.. code-block:: sh
+
+    $ sudo systemctl snmpd enable
+    $ sudo systemctl snmpd start
 
 You should see that the service is active and running and you should also see line
 "Turning on AgentX master support". This means that the snmpd service is up and ready.
@@ -69,6 +91,28 @@ Finally, compile and install the plugin:
     $ make
     # make install
 
+Using the module
+-----------------
+The OID of the IPFIX-MIB module is
+
+.. code-block:: sh
+
+    1.3.6.1.2.1.193
+    #or
+    iso.org.dod.internet.mgmt.mib-2.ipfixMIB
+
+To poll values from the MIB you can use one of the tools distributed with Net-SNMP library, more specifically
+the snmpget or snmpwalk tools.
+
+.. note::
+
+    On Fedora/RHEL distributions, the tools needs to be installed from package libsnmp-utils.
+    On Ubuntu/Debian the tools are automatically installed with library packages.
+
+Before you start using them, you need to import IPFIX-MIB.txt file, containing the definition of the IPFIX-MIB
+module in ASN.1, into the folder containing other MIB modules. Usually, the folder is located
+/usr/local/share/snmp/mibs/ but it can differ on some systems, so check yours before you import.
+The definition of the IPFIX-MIB module can be copied from RFC6615.
 
 Example configuration
 ---------------------
@@ -113,7 +157,7 @@ Parameters
 
 Notes
 -----
-The snmp export module currently prints message
+If you are using Net-SNMP v5.8 the snmp agent will print this message
 
 .. code-block:: sh
 

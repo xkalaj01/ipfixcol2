@@ -1,6 +1,44 @@
-// SNMP daemon, which initializes the MIB modules and dispatches SNMP messages
-// Created by root on 11.12.18.
-//
+/**
+ * \file snmp.c
+ * \author Jan Kala <xkalaj01@stud.fit.vutbr.cz>
+ * \brief SNMP agent for data export (source file)
+ * \date 2019
+ */
+
+/* Copyright (C) 2019 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
 #include <iostream>
 #include "../Interface.h"
 #include "snmp.h"
@@ -14,6 +52,7 @@
 #include <atomic>
 #include <csignal>
 
+/** Structure for keeping track of allocated memory during initialization */
 struct table_caches{
     ipfixTransportSession_cache_data    *TransportSession;
     ipfixTransportSessionStats_cache_data *TransportSessionStats;
@@ -27,7 +66,37 @@ SNMPService::SNMPService(Storage *storage, Config *config) {
     this->config = config;
     init_mutex.lock();
 }
+SNMPService::~SNMPService() {
+    // Kill thread
+    kill_me = true;
+    write(termination_fd[1], "END", 3);
 
+    // Join thread
+    if (thread.joinable()){
+        thread.join();
+    }
+    // close pipe
+    close(termination_fd[1]);
+}
+void SNMPService::run() {
+    // Create pipe for thread termination
+    if (pipe(termination_fd) == -1){
+        throw std::runtime_error("Failed to create pipe in SNMP module!");
+    }
+
+    // Start thread and wait for it to be initialized
+    thread = std::thread(&SNMPService::worker, this);
+    init_mutex.lock();
+
+    // check successful initialization
+    if (!initialized){
+        throw std::runtime_error("Failed to initialize SNMP module. Is the snmpd running as master AgentX?");
+    }
+}
+
+/**
+ * \brief Main worker of the agent. This function is ran in separate thread.
+ */
 void SNMPService::worker() {
     table_caches caches{};
 
@@ -48,7 +117,8 @@ void SNMPService::worker() {
     }
 
     cfg_snmp *cfg = config->outputs.snmp;
-    // Register MIB structure to NetSNMP library
+
+    // Initialize the MIB tables and register them to master agent
     caches.TransportSession = initialize_table_ipfixTransportSessionTable(
             &storage->TransportSessionTable, static_cast<uint>(cfg->timeouts.TransportSessionTable));
     caches.TransportSessionStats = initialize_table_ipfixTransportSessionStatsTable(
@@ -106,37 +176,13 @@ void SNMPService::worker() {
     free_internals(&caches);
 }
 
-void SNMPService::run() {
-    // Create pipe for thread termination
-    if (pipe(termination_fd) == -1){
-        throw std::runtime_error("Failed to create pipe in SNMP module!");
-    }
-
-    // Start thread and wait for it to be initialized
-    thread = std::thread(&SNMPService::worker, this);
-    init_mutex.lock();
-
-    // check successful initialization
-    if (!initialized){
-        throw std::runtime_error("Failed to initialize SNMP module. Is the snmpd running as master AgentX?");
-    }
-}
-
-
-
-SNMPService::~SNMPService() {
-    // Kill thread
-    kill_me = true;
-    write(termination_fd[1], "END", 3);
-
-    // Join thread
-    if (thread.joinable()){
-        thread.join();
-    }
-    // close pipe
-    close(termination_fd[1]);
-}
-
+/**
+ * \brief Frees memory allocated during initialization of MIB tables
+ *
+ * Net-SNMP library leaves some unfreed memory after shutdown functions in main worker.
+ * This functions frees the hanging memory.
+ * \param caches Structure containing the pointers to allocated memory
+ */
 void SNMPService::free_internals(table_caches *caches) {
     if (caches == NULL){
         return;
