@@ -44,8 +44,9 @@
 #include <zconf.h>
 #include <chrono>
 #include "Storage.h"
-#include "../../../../src/core/message_ipfix.h"
-#include "../../../../src/core/message_session.c"
+#include <ipfixcol2/message_ipfix.h>
+#include <ipfixcol2/message_session.h>
+#include <ipfixcol2/message.h>
 
 // Lock initialization
 std::atomic_flag storage_lock = ATOMIC_FLAG_INIT;
@@ -91,7 +92,7 @@ int Storage::process_message(ipx_msg_t *msg) {
  * \return IPX_ERR_FORMAT Error in message format
  */
 int Storage::process_ipfix_msg(ipx_msg_ipfix_t *msg) {
-    std::string external_id = get_string_id(msg->ctx.session);
+    std::string external_id = get_string_id(ipx_msg_ipfix_get_ctx(msg)->session);
 
     uint32_t internal_id;
 
@@ -129,7 +130,7 @@ int Storage::process_ipfix_msg(ipx_msg_ipfix_t *msg) {
 
     // Preparing id to TemplateTable
     std::get<0>(templateTable_index) = internal_id; // Transport session id
-    std::get<1>(templateTable_index) = msg->ctx.odid;
+    std::get<1>(templateTable_index) = ipx_msg_ipfix_get_ctx(msg)->odid;
 
     struct ipx_ipfix_set *sets;
     size_t set_cnt;
@@ -182,7 +183,7 @@ int Storage::process_ipfix_msg(ipx_msg_ipfix_t *msg) {
 
                 // Updating information in TemplateTable
                 TemplateTable[templateTable_index].TransportSessionIndex = internal_id;
-                TemplateTable[templateTable_index].ObservationDomainId = msg->ctx.odid;
+                TemplateTable[templateTable_index].ObservationDomainId = ipx_msg_ipfix_get_ctx(msg)->odid;
                 TemplateTable[templateTable_index].Id = tmplt->id;
                 TemplateTable[templateTable_index].SetId = set_id;
                 TemplateTable[templateTable_index].AccessTime = ntohl(ipfix_msg_hdr->export_time);
@@ -195,7 +196,7 @@ int Storage::process_ipfix_msg(ipx_msg_ipfix_t *msg) {
 
                     // Updating information in Template Definition Table
                     TemplateDefinitionTable[templateDefinitionTable_index].TransportSessionIndex = internal_id;
-                    TemplateDefinitionTable[templateDefinitionTable_index].ObservationDomainId = msg->ctx.odid;
+                    TemplateDefinitionTable[templateDefinitionTable_index].ObservationDomainId = ipx_msg_ipfix_get_ctx(msg)->odid;
                     TemplateDefinitionTable[templateDefinitionTable_index].TemplateId = tmplt->id;
                     TemplateDefinitionTable[templateDefinitionTable_index].Index = i;
                     TemplateDefinitionTable[templateDefinitionTable_index].Id = current.id;
@@ -211,7 +212,7 @@ int Storage::process_ipfix_msg(ipx_msg_ipfix_t *msg) {
     // iteration through all data sets in message for collecting statistics regarding used templates
     TemplateStatsIndex_t templateStatTable_index;
     std::get<0>(templateStatTable_index) = internal_id;
-    std::get<1>(templateStatTable_index) = msg->ctx.odid;;
+    std::get<1>(templateStatTable_index) = ipx_msg_ipfix_get_ctx(msg)->odid;;
 
     uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(msg);
     for (uint32_t i = 0; i< rec_cnt; ++i){
@@ -221,7 +222,7 @@ int Storage::process_ipfix_msg(ipx_msg_ipfix_t *msg) {
         // get the template id for indexing stat table
         std::get<2>(templateStatTable_index) = ipfix_rec->rec.tmplt->id;
         TemplateStatsTable[templateStatTable_index].TransportSessionIndex = internal_id;
-        TemplateStatsTable[templateStatTable_index].ObservationDomainId = msg->ctx.odid;
+        TemplateStatsTable[templateStatTable_index].ObservationDomainId = ipx_msg_ipfix_get_ctx(msg)->odid;
         TemplateStatsTable[templateStatTable_index].TemplateId = ipfix_rec->rec.tmplt->id;
         check_and_set_discontinuity(TemplateStatsTable[templateStatTable_index].DataRecords, 1,
                 &TemplateStatsTable[templateStatTable_index].DiscontinuityTime);
@@ -238,7 +239,7 @@ int Storage::process_ipfix_msg(ipx_msg_ipfix_t *msg) {
  */
 int Storage::process_session_msg(ipx_msg_session_t *msg) {
     // constructing string identificator of exporter from IP and port numbers
-    std::string str_id = get_string_id(msg->session);
+    std::string str_id = get_string_id(ipx_msg_session_get_session(msg));
 
     if (ipx_msg_session_get_event(msg) == IPX_MSG_SESSION_OPEN){
         // adding new record to TransportSession table
@@ -262,19 +263,19 @@ int Storage::process_session_msg(ipx_msg_session_t *msg) {
 
         // Saving specific information for each transport protocol
         const struct ipx_session_net *net = nullptr;
-        if (msg->session->type == FDS_SESSION_UDP){
+        if (ipx_msg_session_get_session(msg)->type == FDS_SESSION_UDP){
             new_entry->Protocol = IPPROTO_UDP;
-            new_entry->TemplateRefreshTimeout = msg->session->udp.lifetime.tmplts;
-            new_entry->OptionsTemplateRefreshTimeout = msg->session->udp.lifetime.opts_tmplts;
-            net = &msg->session->udp.net;
+            new_entry->TemplateRefreshTimeout = ipx_msg_session_get_session(msg)->udp.lifetime.tmplts;
+            new_entry->OptionsTemplateRefreshTimeout = ipx_msg_session_get_session(msg)->udp.lifetime.opts_tmplts;
+            net = &(ipx_msg_session_get_session(msg)->udp.net);
         }
-        else if (msg->session->type == FDS_SESSION_TCP){
+        else if (ipx_msg_session_get_session(msg)->type == FDS_SESSION_TCP){
             new_entry->Protocol = IPPROTO_TCP;
-            net = &msg->session->tcp.net;
+            net = &(ipx_msg_session_get_session(msg)->tcp.net);
         }
-        else if (msg->session->type == FDS_SESSION_SCTP){
+        else if (ipx_msg_session_get_session(msg)->type == FDS_SESSION_SCTP){
             new_entry->Protocol = IPPROTO_SCTP;
-            net = &msg->session->sctp.net;
+            net = &(ipx_msg_session_get_session(msg)->sctp.net);
             // SCTP Association ID can be added here
         }
         // Extracting Transport information

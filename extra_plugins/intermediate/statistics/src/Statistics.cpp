@@ -44,7 +44,7 @@
 #include "Interface.h"
 #include <thread>
 #include <iostream>
-#include "../../../../src/core/message_ipfix.h"
+#include <ipfixcol2/message_ipfix.h>
 #include "Config.h"
 
 /** Plugin description */

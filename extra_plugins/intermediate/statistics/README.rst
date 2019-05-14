@@ -112,7 +112,9 @@ the snmpget or snmpwalk tools.
 Before you start using them, you need to import IPFIX-MIB.txt file, containing the definition of the IPFIX-MIB
 module in ASN.1, into the folder containing other MIB modules. Usually, the folder is located
 /usr/local/share/snmp/mibs/ but it can differ on some systems, so check yours before you import.
-The definition of the IPFIX-MIB module can be copied from RFC6615.
+The definition of the IPFIX-MIB module can be copied from RFC6615. Also, the IPFIX-MIB is dependent on
+ENTITY-MIB, so make sure that you also have ENTITY-MIB.txt file in the mibs folder.
+
 
 Example configuration
 ---------------------
