@@ -64,13 +64,14 @@ add_library(statistics-intermediate MODULE
         src/snmp/mib_tables/ipfixTemplateDefinitionTable.cpp
         src/snmp/mib_tables/ipfixTransportSessionStatsTable.cpp
         src/snmp/mib_tables/ipfixTemplateStatsTable.cpp
+        src/file/TextFile.cpp
 
         src/snmp/mib_tables/ipfixTransportSessionTable.h
         src/snmp/mib_tables/ipfixTemplateTable.h
         src/snmp/mib_tables/ipfixTemplateDefinitionTable.h
         src/snmp/mib_tables/ipfixTransportSessionStatsTable.h
         src/snmp/mib_tables/ipfixTemplateStatsTable.h
-        )
+        src/file/TextFile.h)
 
 target_link_libraries( statistics-intermediate
 #        ${FDS_LIBRARIES}              # libfds

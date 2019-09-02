@@ -55,10 +55,17 @@ enum params_xml_nodes {
     // Common output
     OUTPUT_LIST,       /**< List of output types                           */
     OUTPUT_SNMP,       /**< SNMP output                                    */
+    OUTPUT_TEXT_FILE,   /**< Text file output                              */
     // SNMP output
     SNMP_TIMEOUT,      /**< List of timeout values for cache expiration    */
     SNMP_TIMEOUT_TABLE,/**< Name of table for timeout                      */
     SNMP_TIMEOUT_VALUE,/**< Value of timeout                               */
+    // Text File output
+    TEXT_FILE_REFRESH ,/**< Refresh time of output file                    */
+    TEXT_FILE_FILENAME,/**< Name of output file                            */
+    TEXT_FILE_CUSTOM,/**< Only user specified tables will be printed       */
+    TEXT_FILE_TABLE_NAME, /**< Name of specified table                     */
+    TEXT_FILE_REWRITE /**< Rewrite file (text is appended by default)      */
 };
 
 /** Definition of the \<timeout\> node */
@@ -74,9 +81,24 @@ static const struct fds_xml_args args_snmp[] = {
     FDS_OPTS_END
 };
 
+/** Definition of the \<custom\> node */
+static const struct fds_xml_args args_custom[] = {
+        FDS_OPTS_ELEM(TEXT_FILE_TABLE_NAME, "table", FDS_OPTS_T_STRING, FDS_OPTS_P_MULTI),
+        FDS_OPTS_END
+};
+/** Definition of the \<text_file\> node */
+static const struct fds_xml_args args_text_file[] = {
+        FDS_OPTS_NESTED(TEXT_FILE_CUSTOM, "customOutput", args_custom, FDS_OPTS_P_OPT),
+        FDS_OPTS_ELEM(TEXT_FILE_REFRESH, "refresh", FDS_OPTS_T_UINT, FDS_OPTS_P_OPT),
+        FDS_OPTS_ELEM(TEXT_FILE_FILENAME, "filename", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+        FDS_OPTS_ELEM(TEXT_FILE_REWRITE, "rewrite", FDS_OPTS_T_BOOL, 0),
+        FDS_OPTS_END
+};
+
 /** Definition of the \<outputs\> node  */
 static const struct fds_xml_args args_outputs[] = {
     FDS_OPTS_NESTED(OUTPUT_SNMP,  "snmp",  args_snmp,  FDS_OPTS_P_OPT),
+    FDS_OPTS_NESTED(OUTPUT_TEXT_FILE, "textFile", args_text_file, FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
 
@@ -157,6 +179,33 @@ Config::parse_snmp(fds_xml_ctx_t *snmp)
 }
 
 /**
+ * \brief Parse text file node in XML
+ * \param[in] text_file Parsed XML context
+ * \throw invalid_argument
+ */
+void Config::parse_text_file(fds_xml_ctx_t *text_file) {
+    const struct fds_xml_cont *content;
+    while (fds_xml_next(text_file, &content) != FDS_EOC) {
+        switch (content->id) {
+            case TEXT_FILE_REFRESH:
+                outputs.text_file->refresh = content->val_uint;
+                break;
+            case TEXT_FILE_FILENAME:
+                outputs.text_file->filename = content->ptr_string;
+                break;
+            case TEXT_FILE_CUSTOM:
+                parse_custom_output(content->ptr_ctx);
+                break;
+            case TEXT_FILE_REWRITE:
+                outputs.text_file->rewrite = content->val_bool;
+                break;
+            default:
+                throw std::invalid_argument("Unexpected element within <textFile>!");
+        }
+    }
+}
+
+/**
  * \brief Parse list of outputs
  * \param[in] outputs Parsed XML context
  * \throw invalid_argument
@@ -172,6 +221,11 @@ Config::parse_outputs(fds_xml_ctx_t *outputs)
             this->outputs.snmp = static_cast<cfg_snmp *>(calloc(1, sizeof(cfg_snmp)));
             snmp_default_set();
             parse_snmp(content->ptr_ctx);
+            break;
+        case OUTPUT_TEXT_FILE:
+            this->outputs.text_file = static_cast<cfg_text_file *>(calloc(1, sizeof(cfg_text_file)));
+            text_file_default_set();
+            parse_text_file(content->ptr_ctx);
             break;
         default:
             throw std::invalid_argument("Unexpected element within <outputs>!");
@@ -218,11 +272,12 @@ void
 Config::default_set()
 {
     outputs.snmp = nullptr;
+    outputs.text_file = nullptr;
     session_activity_timeout = SESSION_ACIVITY_TIMEOUT_DEFAULT;
 }
 
 /**
- * \brief Reset all parameters of SNMP output submodule to default values
+ * \brief Reset all parameters of SNMP output service to default values
  */
 void
 Config::snmp_default_set() {
@@ -231,6 +286,19 @@ Config::snmp_default_set() {
     outputs.snmp->timeouts.TemplateDefinitionTable = SNMP_TIMEOUT_DEFAULT;
     outputs.snmp->timeouts.TransportSessionStatsTable = SNMP_TIMEOUT_DEFAULT;
     outputs.snmp->timeouts.TemplateStatsTable = SNMP_TIMEOUT_DEFAULT;
+}
+
+/**
+ * \brief Reset all parameters of Text File output service to default values
+ */
+void Config::text_file_default_set() {
+    outputs.text_file->refresh = TEXT_FILE_REFRESH_DEFAULT;
+    outputs.text_file->filename = nullptr;
+    outputs.text_file->tables.TransportSessionTable = true;
+    outputs.text_file->tables.TemplateTable = true;
+    outputs.text_file->tables.TemplateDefinitionTable = true;
+    outputs.text_file->tables.TransportSessionStatsTable = true;
+    outputs.text_file->tables.TemplateStatsTable = true;
 }
 
 Config::Config(const char *params)
@@ -264,6 +332,45 @@ Config::Config(const char *params)
 Config::~Config()
 {
     free(outputs.snmp);
+    free(outputs.text_file);
 }
+
+void Config::parse_custom_output(fds_xml_ctx_t *custom) {
+    std::string table_name;
+
+    // First set all to false and only true will be the ones specified
+    outputs.text_file->tables.TransportSessionTable = false;
+    outputs.text_file->tables.TemplateTable = false;
+    outputs.text_file->tables.TemplateDefinitionTable = false;
+    outputs.text_file->tables.TransportSessionStatsTable = false;
+    outputs.text_file->tables.TemplateStatsTable = false;
+
+    const struct fds_xml_cont *content;
+    while (fds_xml_next(custom, &content) != FDS_EOC) {
+        switch (content->id) {
+            case TEXT_FILE_TABLE_NAME:
+                table_name = content->ptr_string;
+                if (table_name == "ipfixTransportSessionTable"){
+                    outputs.text_file->tables.TransportSessionTable = true;
+                } else if (table_name == "ipfixTemplateTable"){
+                    outputs.text_file->tables.TemplateTable = true;
+                } else if (table_name == "ipfixTemplateDefinitionTable"){
+                    outputs.text_file->tables.TemplateDefinitionTable = true;
+                } else if (table_name == "ipfixTransportSessionStatsTable"){
+                    outputs.text_file->tables.TransportSessionStatsTable = true;
+                } else if (table_name == "ipfixTemplateStatsTable"){
+                    outputs.text_file->tables.TemplateStatsTable = true;
+                } else {
+                    table_name.clear();
+                    throw std::invalid_argument("Invalid name of the MIB table for custom text file output!");
+                }
+                break;
+            default:
+                throw std::invalid_argument("Unexpected element within <custom>!");
+        }
+    }
+}
+
+
 
 

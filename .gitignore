@@ -68,3 +68,7 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+extra_plugins/intermediate/statistics/README\.html
+
+src/plugins/output/dummy_meter/

@@ -43,6 +43,7 @@
 #include <ipfixcol2.h>
 #include "Interface.h"
 #include "snmp/snmp.h"
+#include "file/TextFile.h"
 #include <ipfixcol2/message_ipfix.h>
 #include "Config.h"
 #include <memory>
@@ -82,6 +83,10 @@ StatisticsInterface::StatisticsInterface(Storage *storage, Config* cfg) {
     if (cfg->outputs.snmp != NULL){
         std::unique_ptr<StatisticsService> snmp(new SNMPService(storage, cfg));
         services.push_back(snmp.release());
+    }
+    if (cfg->outputs.text_file != nullptr){
+        std::unique_ptr<StatisticsService> text_file(new TextFileService(storage, cfg));
+        services.push_back(text_file.release());
     }
 
 }

@@ -50,6 +50,8 @@
 #define SNMP_TIMEOUT_DEFAULT                1
 /** Default value of timeout for session activity                                                       */
 #define SESSION_ACIVITY_TIMEOUT_DEFAULT     10
+/** Default value of timeout for refresh of text file                                                   */
+#define TEXT_FILE_REFRESH_DEFAULT           1
 
 /** Configuration for the SNMP output submodule                                                         */
 struct cfg_snmp {
@@ -62,16 +64,33 @@ struct cfg_snmp {
     }timeouts; /**< Timeouts for SNMP cache expiration for all MIB tables                               */
 };
 
+struct cfg_text_file{
+    bool        rewrite;
+    uint64_t    refresh;
+    char*       filename;
+    struct{
+        bool TransportSessionTable;
+        bool TemplateTable;
+        bool TemplateDefinitionTable;
+        bool TransportSessionStatsTable;
+        bool TemplateStatsTable;
+    }tables;
+};
+
 
 /** Parsed configuration for statistics module and its output submodules                                */
 class Config {
 private:
     void default_set();
     void snmp_default_set();
+    void text_file_default_set();
+
+    void parse_text_file(fds_xml_ctx_t *text_file);
     void parse_timeout(fds_xml_ctx_t *timeout);
     void parse_snmp(fds_xml_ctx_t *snmp);
     void parse_outputs(fds_xml_ctx_t *outputs);
     void parse_params(fds_xml_ctx_t *params);
+    void parse_custom_output(fds_xml_ctx_t *custom);
 
 public:
     /** Timeout value. Sessions are marked as inactive if no data was transfered during this interval   */
@@ -80,6 +99,8 @@ public:
     struct {
         /** SNMP Output configuration                                                                   */
         struct cfg_snmp *snmp;
+        /** Text File configuration                                                                     */
+        struct cfg_text_file *text_file;
     } outputs; /**< Outputs                                                                            */
 
     /**
