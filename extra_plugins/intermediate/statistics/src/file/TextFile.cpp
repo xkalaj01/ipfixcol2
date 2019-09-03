@@ -10,7 +10,6 @@ TextFileService::TextFileService(Storage *storage, cfg_text_file *config) {
     this->storage = storage;
     this->config = config;
     write_to_file = !config->filename.empty();
-    std::cout<<config->filename<<std::endl;
 }
 
 void TextFileService::run() {
@@ -32,7 +31,7 @@ void TextFileService::worker() {
 }
 
 TextFileService::~TextFileService() {
-    // Terminate metering thread
+    // Terminate TextFIle thread
     worker_cv.notify_all();
     if (worker_thread.joinable()){
         worker_thread.join();
@@ -44,7 +43,6 @@ void TextFileService::start_writing() {
         fout = stdout;
         write_line("\033c");
     } else{
-        std::cout<<"hello"<<std::endl;
         if (config->rewrite){
             fout = fopen(config->filename.c_str(), "w");
         } else{
@@ -150,7 +148,6 @@ void TextFileService::write_table_transport_session() {
 
 }
 
-
 void TextFileService::write_table_transport_session_stats() {
     char time_buff[50];
     write_line("Transport Session Statistics\n");
@@ -241,7 +238,6 @@ void TextFileService::write_table_template_stats() {
                    20, time_buff);
     }
 }
-
 
 void TextFileService::time2str(char *buff, size_t buff_size, time_t timeval) {
     if (timeval > 0){

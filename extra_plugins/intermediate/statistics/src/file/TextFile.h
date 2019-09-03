@@ -24,9 +24,6 @@ private:
     std::condition_variable worker_cv;
     std::thread             worker_thread;
 
-
-
-private:
     bool        write_to_file;
     FILE*       fout;
     Storage*    storage;
