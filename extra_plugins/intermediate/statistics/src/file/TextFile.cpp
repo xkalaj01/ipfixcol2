@@ -6,12 +6,11 @@
 #include "TextFile.h"
 #include "../Config.h"
 
-TextFileService::TextFileService(Storage *storage, Config *config) {
+TextFileService::TextFileService(Storage *storage, cfg_text_file *config) {
     this->storage = storage;
     this->config = config;
-    write_to_file = config->outputs.text_file->filename != nullptr;
-
-    // Create file in destination from config
+    write_to_file = !config->filename.empty();
+    std::cout<<config->filename<<std::endl;
 }
 
 void TextFileService::run() {
@@ -20,7 +19,7 @@ void TextFileService::run() {
 
 void TextFileService::worker() {
     std::unique_lock<std::mutex> lock(worker_mutex);
-    std::chrono::seconds sec(config->outputs.text_file->refresh);
+    std::chrono::seconds sec(config->refresh);
 
     while (worker_cv.wait_for(lock, sec) == std::cv_status::timeout){
         while(storage_lock.test_and_set(std::memory_order_acquire));
@@ -35,7 +34,6 @@ void TextFileService::worker() {
 TextFileService::~TextFileService() {
     // Terminate metering thread
     worker_cv.notify_all();
-    fclose(fout);
     if (worker_thread.joinable()){
         worker_thread.join();
     }
@@ -46,11 +44,13 @@ void TextFileService::start_writing() {
         fout = stdout;
         write_line("\033c");
     } else{
-        if (config->outputs.text_file->rewrite){
-            fout = fopen(config->outputs.text_file->filename, "w");
+        std::cout<<"hello"<<std::endl;
+        if (config->rewrite){
+            fout = fopen(config->filename.c_str(), "w");
         } else{
-            fout = fopen(config->outputs.text_file->filename, "a");
+            fout = fopen(config->filename.c_str(), "a");
         }
+
         if (fout == nullptr){
             throw std::runtime_error("Failed to open the specified file!");
         }
@@ -74,23 +74,23 @@ void TextFileService::write_header() {
 }
 
 void TextFileService::write_body() {
-    if (config->outputs.text_file->tables.TransportSessionTable){
+    if (config->tables.TransportSessionTable){
         write_table_transport_session();
         write_line("\n");
     }
-    if (config->outputs.text_file->tables.TransportSessionStatsTable) {
+    if (config->tables.TransportSessionStatsTable) {
         write_table_transport_session_stats();
         write_line("\n");
     }
-    if (config->outputs.text_file->tables.TemplateTable){
+    if (config->tables.TemplateTable){
         write_table_template();
         write_line("\n");
     }
-    if (config->outputs.text_file->tables.TemplateStatsTable) {
+    if (config->tables.TemplateStatsTable) {
         write_table_template_stats();
         write_line("\n");
     }
-    if (config->outputs.text_file->tables.TemplateDefinitionTable) {
+    if (config->tables.TemplateDefinitionTable) {
         write_table_template_definition();
         write_line("\n");
     }

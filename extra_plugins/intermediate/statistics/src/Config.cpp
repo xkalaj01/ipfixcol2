@@ -98,7 +98,7 @@ static const struct fds_xml_args args_text_file[] = {
 /** Definition of the \<outputs\> node  */
 static const struct fds_xml_args args_outputs[] = {
     FDS_OPTS_NESTED(OUTPUT_SNMP,  "snmp",  args_snmp,  FDS_OPTS_P_OPT),
-    FDS_OPTS_NESTED(OUTPUT_TEXT_FILE, "textFile", args_text_file, FDS_OPTS_P_OPT),
+    FDS_OPTS_NESTED(OUTPUT_TEXT_FILE, "textFile", args_text_file, FDS_OPTS_P_MULTI |FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
 
@@ -185,19 +185,20 @@ Config::parse_snmp(fds_xml_ctx_t *snmp)
  */
 void Config::parse_text_file(fds_xml_ctx_t *text_file) {
     const struct fds_xml_cont *content;
+    cfg_text_file *cfg = &outputs.text_files.back();
     while (fds_xml_next(text_file, &content) != FDS_EOC) {
         switch (content->id) {
             case TEXT_FILE_REFRESH:
-                outputs.text_file->refresh = content->val_uint;
+                cfg->refresh = content->val_uint;
                 break;
             case TEXT_FILE_FILENAME:
-                outputs.text_file->filename = content->ptr_string;
+                cfg->filename = content->ptr_string;
                 break;
             case TEXT_FILE_CUSTOM:
                 parse_custom_output(content->ptr_ctx);
                 break;
             case TEXT_FILE_REWRITE:
-                outputs.text_file->rewrite = content->val_bool;
+                cfg->rewrite = content->val_bool;
                 break;
             default:
                 throw std::invalid_argument("Unexpected element within <textFile>!");
@@ -214,6 +215,7 @@ void
 Config::parse_outputs(fds_xml_ctx_t *outputs)
 {
     const struct fds_xml_cont *content;
+    cfg_text_file new_text_file_cfg = {};
     while (fds_xml_next(outputs, &content) != FDS_EOC) {
         assert(content->type == FDS_OPTS_T_CONTEXT);
         switch (content->id) {
@@ -223,7 +225,7 @@ Config::parse_outputs(fds_xml_ctx_t *outputs)
             parse_snmp(content->ptr_ctx);
             break;
         case OUTPUT_TEXT_FILE:
-            this->outputs.text_file = static_cast<cfg_text_file *>(calloc(1, sizeof(cfg_text_file)));
+            this->outputs.text_files.push_back(new_text_file_cfg);
             text_file_default_set();
             parse_text_file(content->ptr_ctx);
             break;
@@ -272,7 +274,6 @@ void
 Config::default_set()
 {
     outputs.snmp = nullptr;
-    outputs.text_file = nullptr;
     session_activity_timeout = SESSION_ACIVITY_TIMEOUT_DEFAULT;
 }
 
@@ -292,13 +293,15 @@ Config::snmp_default_set() {
  * \brief Reset all parameters of Text File output service to default values
  */
 void Config::text_file_default_set() {
-    outputs.text_file->refresh = TEXT_FILE_REFRESH_DEFAULT;
-    outputs.text_file->filename = nullptr;
-    outputs.text_file->tables.TransportSessionTable = true;
-    outputs.text_file->tables.TemplateTable = true;
-    outputs.text_file->tables.TemplateDefinitionTable = true;
-    outputs.text_file->tables.TransportSessionStatsTable = true;
-    outputs.text_file->tables.TemplateStatsTable = true;
+    if (!outputs.text_files.empty()) {
+        cfg_text_file *cfg = &outputs.text_files.back();
+        cfg->refresh = TEXT_FILE_REFRESH_DEFAULT;
+        cfg->tables.TransportSessionTable = true;
+        cfg->tables.TemplateTable = true;
+        cfg->tables.TemplateDefinitionTable = true;
+        cfg->tables.TransportSessionStatsTable = true;
+        cfg->tables.TemplateStatsTable = true;
+    }
 }
 
 Config::Config(const char *params)
@@ -332,18 +335,19 @@ Config::Config(const char *params)
 Config::~Config()
 {
     free(outputs.snmp);
-    free(outputs.text_file);
+    outputs.text_files.clear();
 }
 
 void Config::parse_custom_output(fds_xml_ctx_t *custom) {
     std::string table_name;
 
     // First set all to false and only true will be the ones specified
-    outputs.text_file->tables.TransportSessionTable = false;
-    outputs.text_file->tables.TemplateTable = false;
-    outputs.text_file->tables.TemplateDefinitionTable = false;
-    outputs.text_file->tables.TransportSessionStatsTable = false;
-    outputs.text_file->tables.TemplateStatsTable = false;
+    cfg_text_file *cfg = &outputs.text_files.back();
+    cfg->tables.TransportSessionTable = false;
+    cfg->tables.TemplateTable = false;
+    cfg->tables.TemplateDefinitionTable = false;
+    cfg->tables.TransportSessionStatsTable = false;
+    cfg->tables.TemplateStatsTable = false;
 
     const struct fds_xml_cont *content;
     while (fds_xml_next(custom, &content) != FDS_EOC) {
@@ -351,15 +355,15 @@ void Config::parse_custom_output(fds_xml_ctx_t *custom) {
             case TEXT_FILE_TABLE_NAME:
                 table_name = content->ptr_string;
                 if (table_name == "ipfixTransportSessionTable"){
-                    outputs.text_file->tables.TransportSessionTable = true;
+                    cfg->tables.TransportSessionTable = true;
                 } else if (table_name == "ipfixTemplateTable"){
-                    outputs.text_file->tables.TemplateTable = true;
+                    cfg->tables.TemplateTable = true;
                 } else if (table_name == "ipfixTemplateDefinitionTable"){
-                    outputs.text_file->tables.TemplateDefinitionTable = true;
+                    cfg->tables.TemplateDefinitionTable = true;
                 } else if (table_name == "ipfixTransportSessionStatsTable"){
-                    outputs.text_file->tables.TransportSessionStatsTable = true;
+                    cfg->tables.TransportSessionStatsTable = true;
                 } else if (table_name == "ipfixTemplateStatsTable"){
-                    outputs.text_file->tables.TemplateStatsTable = true;
+                    cfg->tables.TemplateStatsTable = true;
                 } else {
                     table_name.clear();
                     throw std::invalid_argument("Invalid name of the MIB table for custom text file output!");

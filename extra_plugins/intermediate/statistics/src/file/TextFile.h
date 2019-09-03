@@ -12,7 +12,7 @@
 
 class TextFileService: public StatisticsService{
 public:
-    explicit TextFileService(Storage *storage, Config *config);
+    explicit TextFileService(Storage *storage, cfg_text_file *config);
     ~TextFileService() override;
 
     void run() override;
@@ -30,7 +30,7 @@ private:
     bool        write_to_file;
     FILE*       fout;
     Storage*    storage;
-    Config*     config;
+    cfg_text_file *config;
 
     void start_writing();
     void stop_writing();

@@ -67,7 +67,7 @@ struct cfg_snmp {
 struct cfg_text_file{
     bool        rewrite;
     uint64_t    refresh;
-    char*       filename;
+    std::string filename;
     struct{
         bool TransportSessionTable;
         bool TemplateTable;
@@ -100,7 +100,7 @@ public:
         /** SNMP Output configuration                                                                   */
         struct cfg_snmp *snmp;
         /** Text File configuration                                                                     */
-        struct cfg_text_file *text_file;
+        std::vector<cfg_text_file> text_files;
     } outputs; /**< Outputs                                                                            */
 
     /**

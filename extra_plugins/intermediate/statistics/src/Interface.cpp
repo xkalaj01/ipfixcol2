@@ -84,9 +84,13 @@ StatisticsInterface::StatisticsInterface(Storage *storage, Config* cfg) {
         std::unique_ptr<StatisticsService> snmp(new SNMPService(storage, cfg));
         services.push_back(snmp.release());
     }
-    if (cfg->outputs.text_file != nullptr){
-        std::unique_ptr<StatisticsService> text_file(new TextFileService(storage, cfg));
-        services.push_back(text_file.release());
+    if (!cfg->outputs.text_files.empty()){
+        std::vector<cfg_text_file>::iterator it;
+        for (it = cfg->outputs.text_files.begin(); it!= cfg->outputs.text_files.end(); it++){
+            std::unique_ptr<StatisticsService> text_file(new TextFileService(storage, &(*it)));
+            services.push_back(text_file.release());
+
+        }
     }
 
 }
