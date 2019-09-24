@@ -64,6 +64,7 @@ struct cfg_snmp {
     }timeouts; /**< Timeouts for SNMP cache expiration for all MIB tables                               */
 };
 
+/** Configuration for the TextFile output submodule                                                     */
 struct cfg_text_file{
     bool        rewrite;
     uint64_t    refresh;
@@ -76,7 +77,6 @@ struct cfg_text_file{
         bool TemplateStatsTable;
     }tables;
 };
-
 
 /** Parsed configuration for statistics module and its output submodules                                */
 class Config {
@@ -99,7 +99,7 @@ public:
     struct {
         /** SNMP Output configuration                                                                   */
         struct cfg_snmp *snmp;
-        /** Text File configuration                                                                     */
+        /** Text File configuration - there can be more text file services running                      */
         std::vector<cfg_text_file> text_files;
     } outputs; /**< Outputs                                                                            */
 

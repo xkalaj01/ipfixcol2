@@ -5,22 +5,31 @@ Intermediate plugin Statistics is intended to collect operational parameters, st
 way of their export. Data are stored in structures which are based on MIB module IPFIX-MIB (RFC6615), so most
 of the elements included in this MIB module are implemented in the internal structures as well.
 
-Currently there is only one submodule that can be used for data export, which is SNMP agent.
-This agent uses Net-SNMP library, thus this library is needed to be installed for compilation
-of whole plugin. SNMP agent uses snmpd service to receive and dispatch SNMP request, so snmpd is
-also needed to be installed. After start the agent registers to snmpd service through AgentX protocol, so there
-is no need to configure IP addresses or user accounts for SNMP communication inside of the plugin
-as the snmpd service handles this itself.
+Currently there are two submodules that can be used for data export. File export agent and SNMP export agent.
 
-Net-SNMP library offers cache mechanism, which is also implemented in SNMP agent. Caches are used
-for storing information for export. These information are transferred from internal data structure
-every time the cache expires and new SNMP request appears. Timeout for cache expiration of each MIB
-table can be defined in configuration file. If you wish to get the most actual data from collector,
-set the timeout to low values (lowest possible value is 1). If you want to save resources and accesses
-to internal structures you can adjust the values to your need. Default value of the timeout is set to 1s,
-so if you pull values occasionally you don't have to bother with setting the timeouts as the cache will
-be mostly in expired state and it will update itself with the new request. But if you use some SNMP manager
-application for pulling the values periodically, it is recommended to adjust the timeouts accordingly.
+a.  File export agent
+    Simply exports content of internal statistics structure into specified file. File export agent can be
+    started more than once in one session and each export agent can have specified table to print. That
+    means that you can print all internal tables into single file or you can split them into separate files.
+    If you don't specify any file name, the table will be printed on the stdout.
+
+b.  SNMP export agent
+    This agent uses Net-SNMP library, thus this library is needed to be installed for compilation
+    of whole plugin. SNMP agent uses snmpd service to receive and dispatch SNMP request, so snmpd is
+    also needed to be installed. After start the agent registers to snmpd service through AgentX protocol, so there
+    is no need to configure IP addresses or user accounts for SNMP communication inside of the plugin
+    as the snmpd service handles this itself.
+
+    Net-SNMP library offers cache mechanism, which is also implemented in SNMP agent. Caches are used
+    for storing information for export. These information are transferred from internal data structure
+    every time the cache expires and new SNMP request appears. Timeout for cache expiration of each MIB
+    table can be defined in configuration file. If you wish to get the most actual data from collector,
+    set the timeout to low values (lowest possible value is 1). If you want to save resources and accesses
+    to internal structures you can adjust the values to your need. Default value of the timeout is set to 1s,
+    so if you pull values occasionally you don't have to bother with setting the timeouts as the cache will
+    be mostly in expired state and it will update itself with the new request. But if you use some SNMP manager
+    application for pulling the values periodically, it is recommended to adjust the timeouts accordingly.
+
 
 How to build
 ------------
@@ -51,6 +60,25 @@ Finally, compile and install the plugin:
 
 Using the module
 -----------------
+
+File export agent
+~~~~~~~~~~~~~~~~~
+
+File export can be started multiple times in one session. For each instance, you can
+specify refresh of the output (how often will the module print) and what tables you want
+to print to each file. These options gives you option to print each table into separate file
+with different refresh time (e.g. ipfixTransportSessionTable doesn't change that often, so you
+can set 5s refresh. On the other hand ipfixTransportSessionStats table contains speed counters
+so it can have 1s refresh.)
+
+You can omit some parameters in config file. If you don't specify the refresh rate, the default
+refresh will be 1s. If you don't specify the filename, the output will be printed on stdout.
+Also you don't have to specify the 'rewrite' parameter, which means that the output will be appended
+to existing file (if stdout is used for output, the rewrite parameter is not used at all)
+
+SNMP export agent
+~~~~~~~~~~~~~~~~~
+
 .. warning::
 
     First of all, the change to *snmpd.conf* file is needed for functionality of the module.
@@ -70,8 +98,10 @@ Using the module
 
         # enable the service after boot of the system
         $ sudo systemctl snmpd.service enable
+
         # start/restart if the service is already  running
         $ sudo systemctl snmpd.service start
+
         # check the status
         $ sudo systemctl snmpd.service status
 

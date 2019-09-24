@@ -72,3 +72,5 @@ dkms.conf
 extra_plugins/intermediate/statistics/README\.html
 
 src/plugins/output/dummy_meter/
+
+extra_plugins/intermediate/statistics/cmake-build-debug-w-manpaage/

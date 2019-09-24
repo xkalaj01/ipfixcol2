@@ -126,6 +126,7 @@ int Storage::process_ipfix_msg(ipx_msg_ipfix_t *msg) {
 
     // Updating internal information about session
     active_exporters[external_id].RateCounter += ntohs(ipfix_msg_hdr->length);
+    active_exporters[external_id].RecordRateCounter += ipx_msg_ipfix_get_drec_cnt(msg);
     active_exporters[external_id].LastActive = time(nullptr);
 
     // Preparing id to TemplateTable
@@ -256,6 +257,7 @@ int Storage::process_session_msg(ipx_msg_session_t *msg) {
         }
         active_exporters[str_id].TransportSessionTableId = int_id;
         active_exporters[str_id].RateCounter = 0;
+        active_exporters[str_id].RecordRateCounter = 0;
 
         TransportSessionEntry_t *new_entry = &TransportSessionTable[int_id];
         bzero(new_entry, sizeof(*new_entry));
@@ -376,12 +378,14 @@ void Storage::session_metering() {
         while(storage_lock.test_and_set(std::memory_order_acquire));
         // iterate over all active sessions
         for ( it = active_exporters.begin(); it != active_exporters.end(); it++){
-            // Copy counted bytes into MIB table
+            // Copy counted bytes and records into MIB table
             TransportSessionStatsTable[it->second.TransportSessionTableId].Rate = it->second.RateCounter;
+            TransportSessionStatsTable[it->second.TransportSessionTableId].RecordsRate = it->second.RecordRateCounter;
             it->second.RateCounter = 0;
+            it->second.RecordRateCounter = 0;
 
             if (difftime(time(nullptr), it->second.LastActive) >= config->session_activity_timeout){
-                // If the dififference between time of last activity and time now is bigger than timeout - mark as INACTIVE
+                // If the difference between time of last activity and time now is bigger than timeout - mark as INACTIVE
                 TransportSessionTable[it->second.TransportSessionTableId].Status = IPX_SESSIONSTATUS_INACTIVE;
             }else{
                 // Otherwise mark as ACTIVE

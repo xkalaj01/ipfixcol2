@@ -80,7 +80,7 @@ StatisticsInterface::StatisticsInterface(Storage *storage, Config* cfg) {
     this->storage = storage;
 
     // Creating services based on config//
-    if (cfg->outputs.snmp != NULL){
+    if (cfg->outputs.snmp != nullptr){
         std::unique_ptr<StatisticsService> snmp(new SNMPService(storage, cfg));
         services.push_back(snmp.release());
     }

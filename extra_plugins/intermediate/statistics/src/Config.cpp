@@ -61,11 +61,11 @@ enum params_xml_nodes {
     SNMP_TIMEOUT_TABLE,/**< Name of table for timeout                      */
     SNMP_TIMEOUT_VALUE,/**< Value of timeout                               */
     // Text File output
+    TEXT_FILE_REWRITE, /**< Rewrite file (text is appended by default)     */
     TEXT_FILE_REFRESH ,/**< Refresh time of output file                    */
     TEXT_FILE_FILENAME,/**< Name of output file                            */
     TEXT_FILE_CUSTOM,/**< Only user specified tables will be printed       */
     TEXT_FILE_TABLE_NAME, /**< Name of specified table                     */
-    TEXT_FILE_REWRITE /**< Rewrite file (text is appended by default)      */
 };
 
 /** Definition of the \<timeout\> node */
@@ -91,9 +91,10 @@ static const struct fds_xml_args args_text_file[] = {
         FDS_OPTS_NESTED(TEXT_FILE_CUSTOM, "customOutput", args_custom, FDS_OPTS_P_OPT),
         FDS_OPTS_ELEM(TEXT_FILE_REFRESH, "refresh", FDS_OPTS_T_UINT, FDS_OPTS_P_OPT),
         FDS_OPTS_ELEM(TEXT_FILE_FILENAME, "filename", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
-        FDS_OPTS_ELEM(TEXT_FILE_REWRITE, "rewrite", FDS_OPTS_T_BOOL, 0),
+        FDS_OPTS_ELEM(TEXT_FILE_REWRITE, "rewrite", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
         FDS_OPTS_END
 };
+
 
 /** Definition of the \<outputs\> node  */
 static const struct fds_xml_args args_outputs[] = {
@@ -109,6 +110,48 @@ static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ELEM(SESSION_TIMEOUT, "sessionActivityTimeout", FDS_OPTS_T_INT, FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
+
+/**
+ * \brief Parse list of table nodes for custom output
+ * \param[in] custom Parsed XML context
+ * \throw invalid_argument
+ */
+void Config::parse_custom_output(fds_xml_ctx_t *custom) {
+    std::string table_name;
+
+    // First set all to false and only true will be the ones specified
+    cfg_text_file *cfg = &outputs.text_files.back();
+    cfg->tables.TransportSessionTable = false;
+    cfg->tables.TemplateTable = false;
+    cfg->tables.TemplateDefinitionTable = false;
+    cfg->tables.TransportSessionStatsTable = false;
+    cfg->tables.TemplateStatsTable = false;
+
+    const struct fds_xml_cont *content;
+    while (fds_xml_next(custom, &content) != FDS_EOC) {
+        switch (content->id) {
+            case TEXT_FILE_TABLE_NAME:
+                table_name = content->ptr_string;
+                if (table_name == "ipfixTransportSessionTable"){
+                    cfg->tables.TransportSessionTable = true;
+                } else if (table_name == "ipfixTemplateTable"){
+                    cfg->tables.TemplateTable = true;
+                } else if (table_name == "ipfixTemplateDefinitionTable"){
+                    cfg->tables.TemplateDefinitionTable = true;
+                } else if (table_name == "ipfixTransportSessionStatsTable"){
+                    cfg->tables.TransportSessionStatsTable = true;
+                } else if (table_name == "ipfixTemplateStatsTable"){
+                    cfg->tables.TemplateStatsTable = true;
+                } else {
+                    table_name.clear();
+                    throw std::invalid_argument("Invalid name of the MIB table for custom text file output!");
+                }
+                break;
+            default:
+                throw std::invalid_argument("Unexpected element within <custom>!");
+        }
+    }
+}
 
 /**
  * \brief Parse list of timeouts
@@ -296,6 +339,7 @@ void Config::text_file_default_set() {
     if (!outputs.text_files.empty()) {
         cfg_text_file *cfg = &outputs.text_files.back();
         cfg->refresh = TEXT_FILE_REFRESH_DEFAULT;
+        cfg->rewrite = false;
         cfg->tables.TransportSessionTable = true;
         cfg->tables.TemplateTable = true;
         cfg->tables.TemplateDefinitionTable = true;
@@ -338,42 +382,8 @@ Config::~Config()
     outputs.text_files.clear();
 }
 
-void Config::parse_custom_output(fds_xml_ctx_t *custom) {
-    std::string table_name;
 
-    // First set all to false and only true will be the ones specified
-    cfg_text_file *cfg = &outputs.text_files.back();
-    cfg->tables.TransportSessionTable = false;
-    cfg->tables.TemplateTable = false;
-    cfg->tables.TemplateDefinitionTable = false;
-    cfg->tables.TransportSessionStatsTable = false;
-    cfg->tables.TemplateStatsTable = false;
 
-    const struct fds_xml_cont *content;
-    while (fds_xml_next(custom, &content) != FDS_EOC) {
-        switch (content->id) {
-            case TEXT_FILE_TABLE_NAME:
-                table_name = content->ptr_string;
-                if (table_name == "ipfixTransportSessionTable"){
-                    cfg->tables.TransportSessionTable = true;
-                } else if (table_name == "ipfixTemplateTable"){
-                    cfg->tables.TemplateTable = true;
-                } else if (table_name == "ipfixTemplateDefinitionTable"){
-                    cfg->tables.TemplateDefinitionTable = true;
-                } else if (table_name == "ipfixTransportSessionStatsTable"){
-                    cfg->tables.TransportSessionStatsTable = true;
-                } else if (table_name == "ipfixTemplateStatsTable"){
-                    cfg->tables.TemplateStatsTable = true;
-                } else {
-                    table_name.clear();
-                    throw std::invalid_argument("Invalid name of the MIB table for custom text file output!");
-                }
-                break;
-            default:
-                throw std::invalid_argument("Unexpected element within <custom>!");
-        }
-    }
-}
 
 
 

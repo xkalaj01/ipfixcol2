@@ -41,7 +41,6 @@ TextFileService::~TextFileService() {
 void TextFileService::start_writing() {
     if (!write_to_file){
         fout = stdout;
-        write_line("\033c");
     } else{
         if (config->rewrite){
             fout = fopen(config->filename.c_str(), "w");
@@ -151,9 +150,10 @@ void TextFileService::write_table_transport_session() {
 void TextFileService::write_table_transport_session_stats() {
     char time_buff[50];
     write_line("Transport Session Statistics\n");
-    write_line("| %-*s | %-*s | %-*s | %-*s | %-*s | %-*s | %-*s | %-*s | %-*s |\n",
+    write_line("| %-*s | %-*s | %-*s | %-*s | %-*s | %-*s | %-*s | %-*s | %-*s | %-*s |\n",
             16, "Transp. Sess. Id",
             12, "Message Rate",
+            12, "Records Rate",
             12, "Packets",
             12, "Bytes",
             12, "Messages",
@@ -161,13 +161,14 @@ void TextFileService::write_table_transport_session_stats() {
             12, "Templates",
             15, "Opt. Templates",
             20, "Discontinuity Time");
-    write_dashes(149);
+    write_dashes(166);
     for (auto const& item : storage->TransportSessionStatsTable) {
         const TransportSessionStatsEntry_t* entry = &item.second;
         time2str(&time_buff[0], 50, entry->DiscontinuityTime);
-        write_line("| %-*d | %-*d | %-*ld | %-*ld | %-*ld | %-*ld | %-*ld | %-*ld | %-*s |\n",
+        write_line("| %-*d | %-*d | %-*d | %-*ld | %-*ld | %-*ld | %-*ld | %-*ld | %-*ld | %-*s |\n",
                 16, entry->TransportSessionIndex,
                 12, entry->Rate,
+                12, entry->RecordsRate,
                 12, entry->Packets,
                 12, entry->Bytes,
                 12, entry->Messages,

@@ -187,6 +187,10 @@ struct TransportSessionStatsEntry{
     /** Timestamp of event, when one of the above counters overflew                         */
     time_t DiscontinuityTime;
 
+    /** Custom elements (Not based on RFC6615)                                              */
+    /** Number of recieved records per second                                               */
+    uint32_t RecordsRate;
+
     /** Validity field for SNMP library                                                     */
     int valid;
 };
@@ -230,12 +234,14 @@ struct ExporterInfo{
     uint32_t TransportSessionTableId;
     /** Counter of recieved packets                                             */
     uint32_t RateCounter;
+    /** Counter of recieved records                                             */
+    uint32_t RecordRateCounter;
     /** Timestamp of last activity of session                                   */
     time_t   LastActive;
 };
 
 /** Mode of operation of this device, which is collector                        */
-#define IPX_DEVICEMODE_COLLECTING   2
+#define IPX_DEVICEMODE_COLLECTING    2
 /** Defines status of inactive transport session                                */
 #define IPX_SESSIONSTATUS_INACTIVE   1
 /** Defines status of active transport session                                  */
