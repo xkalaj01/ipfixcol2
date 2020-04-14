@@ -47,15 +47,51 @@
 #include <vector>
 #include <ipfixcol2.h>
 
+struct cfg_options {
+    /** Check rate of control thread                                                             */
+    uint16_t check_rate;
+    /** MTU size                                                                                 */
+    uint16_t mtu_size;
+    /** Operational mode (type of sending)                                                       */
+    enum {
+        SEND_MODE_ROUND_ROBIN,
+        SEND_MODE_ALL,
+    } oper_mode;
+    /** Transport Protocol                                                                       */
+    enum {
+        SEND_PROTO_UDP,
+        SEND_PROTO_TCP
+    } proto;
+};
+
+struct cfg_host {
+    /** Name of the host                                                                         */
+    std::string hostname;
+    /** Remote IPv4/IPv6 address                                                                 */
+    std::string addr;
+    /** Destination port                                                                         */
+    uint32_t port;
+};
+
 
 /** Parsed configuration of an instance                                                          */
 class Config {
 private:
     void parse_params(fds_xml_ctx_t *params);
+    void parse_hosts(fds_xml_ctx_t *hosts);
+    void parse_host(fds_xml_ctx_t *host);
+
+    bool check_ip(const std::string &ip_addr);
+    bool check_or(const std::string &elem, const char *value, const std::string &val_true,
+            const std::string &val_false);
     void default_set();
     void check_validity();
 public:
+    /** Module configuration                                                                     */
+    cfg_options options;
 
+    /** Hosts configuration                                                                      */
+    std::vector<cfg_host> hosts;
 
     /**
      * \brief Create a new configuration

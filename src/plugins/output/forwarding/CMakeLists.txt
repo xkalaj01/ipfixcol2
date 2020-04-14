@@ -3,6 +3,10 @@ add_library(forwarding-output MODULE
         src/forwarding.cpp
         src/Config.cpp
         src/Config.hpp
+        src/packet.c
+        src/packet.h
+        src/sender.c
+        src/sender.h
 )
 
 install(

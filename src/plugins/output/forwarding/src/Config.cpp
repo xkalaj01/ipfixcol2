@@ -47,14 +47,99 @@
 #include <libfds.h>
 #include <inttypes.h>
 #include <arpa/inet.h>
-#include <librdkafka/rdkafka.h>
 
 #include "Config.hpp"
 
 /** XML nodes */
 enum params_xml_nodes {
+    GLOBAL_PROTO,
+    GLOBAL_MODE,
+    GLOBAL_MTU,
+    GLOBAL_CHECK_RATE,
+
+    HOSTS,
+    HOST,
+    HOST_NAME,
+    HOST_IPV4,
+    HOST_PORT,
 
 };
+
+static const struct fds_xml_args args_host[] = {
+        FDS_OPTS_ELEM(HOST_NAME, "name", FDS_OPTS_T_STRING, 0),
+        FDS_OPTS_ELEM(HOST_IPV4, "ipv4", FDS_OPTS_T_STRING, 0),
+        FDS_OPTS_ELEM(HOST_PORT, "port", FDS_OPTS_T_UINT, 0),
+        FDS_OPTS_END
+};
+
+static const struct fds_xml_args args_hosts[] = {
+        FDS_OPTS_NESTED(HOST, "host", args_host, FDS_OPTS_P_MULTI),
+        FDS_OPTS_END
+};
+
+static const struct fds_xml_args args_params[] = {
+        FDS_OPTS_ROOT("params"),
+        FDS_OPTS_ELEM(GLOBAL_PROTO,      "protocol",   FDS_OPTS_T_STRING,  FDS_OPTS_P_OPT),
+        FDS_OPTS_ELEM(GLOBAL_MODE,       "mode",       FDS_OPTS_T_STRING,  FDS_OPTS_P_OPT),
+        FDS_OPTS_ELEM(GLOBAL_MTU,        "mtu",        FDS_OPTS_T_UINT,    FDS_OPTS_P_OPT),
+        FDS_OPTS_ELEM(GLOBAL_CHECK_RATE, "check_rate", FDS_OPTS_T_UINT,    FDS_OPTS_P_OPT),
+        FDS_OPTS_NESTED(HOSTS, "hosts", args_hosts, 0),
+        FDS_OPTS_END
+};
+
+/**
+ * \brief Parse <host> node
+ *
+ * \param[in] hosts Initialized XML parser context of the root element
+ * \throw invalid_argument or runtime_error
+ */
+void
+Config::parse_host(fds_xml_ctx_t *host)
+{
+    const struct fds_xml_cont *content;
+    cfg_host new_host;
+    while (fds_xml_next(host, &content) != FDS_EOC) {
+        switch (content->id) {
+            case (HOST_NAME):
+                assert(content->type == FDS_OPTS_T_STRING);
+                new_host.hostname = content->ptr_string;
+                break;
+            case (HOST_IPV4):
+                assert(content->type == FDS_OPTS_T_STRING);
+                new_host.addr = content->ptr_string;
+                break;
+            case (HOST_PORT):
+                assert(content->type == FDS_OPTS_T_UINT);
+                new_host.port = content->val_uint;
+                break;
+
+            default:
+                throw std::invalid_argument("Unexpected element within <host>!");
+        }
+    }
+    hosts.push_back(new_host);
+}
+
+/**
+ * \brief Parse <hosts> node
+ *
+ * \param[in] hosts Initialized XML parser context of the root element
+ * \throw invalid_argument or runtime_error
+ */
+void
+Config::parse_hosts(fds_xml_ctx_t *hosts)
+{
+    const struct fds_xml_cont *content;
+    while (fds_xml_next(hosts, &content) != FDS_EOC) {
+        switch (content->id) {
+            case (HOST):
+                parse_host(content->ptr_ctx);
+                break;
+            default:
+                throw std::invalid_argument("Unexpected element within <hosts>!");
+        }
+    }
+}
 
 /**
  * \brief Parse all parameters
@@ -67,7 +152,82 @@ enum params_xml_nodes {
 void
 Config::parse_params(fds_xml_ctx_t *params)
 {
+    const struct fds_xml_cont *content;
+    while (fds_xml_next(params, &content) != FDS_EOC) {
+        switch (content->id) {
 
+            case GLOBAL_PROTO:
+                assert(content->type == FDS_OPTS_T_STRING);
+                options.proto = check_or("protocol", content->ptr_string, "UDP", "TCP")
+                                ? cfg_options::SEND_PROTO_UDP : cfg_options::SEND_PROTO_TCP;
+                break;
+            case GLOBAL_MODE:
+                assert(content->type == FDS_OPTS_T_STRING);
+                if (strcasecmp(content->ptr_string, "round robin") == 0) {
+                    options.oper_mode = cfg_options::SEND_MODE_ROUND_ROBIN;
+                } else if (strcasecmp(content->ptr_string, "all") == 0) {
+                    options.oper_mode = cfg_options::SEND_MODE_ALL;
+                } else {
+                    throw std::invalid_argument("Unsupported operational mode!");
+                }
+                break;
+            case GLOBAL_MTU:
+                assert(content->type == FDS_OPTS_T_UINT);
+                options.mtu_size = (uint16_t ) content->val_uint;
+                break;
+            case GLOBAL_CHECK_RATE:
+                assert(content->type == FDS_OPTS_T_UINT);
+                options.check_rate = (uint16_t) content->val_uint;
+                break;
+            case HOSTS:
+                parse_hosts(content->ptr_ctx);
+                break;
+            default:
+                throw std::invalid_argument("Unexpected element within <params>!");
+        }
+    }
+}
+
+/**
+ * \brief Check if a given string is a valid IPv4/IPv6 address
+ * \param[in] ip_addr Address to check
+ * \return True or false
+ */
+bool
+Config::check_ip(const std::string &ip_addr)
+{
+    in_addr ipv4;
+    in6_addr ipv6;
+
+    return (inet_pton(AF_INET, ip_addr.c_str(), &ipv4) == 1
+            || inet_pton(AF_INET6, ip_addr.c_str(), &ipv6) == 1);
+}
+
+/**
+ * \brief Check one of 2 expected options
+ *
+ * \param[in] elem      XML element to check (just for exception purposes)
+ * \param[in] value     String to check
+ * \param[in] val_true  True string
+ * \param[in] val_false False string
+ * \throw invalid_argument if the value doesn't match any expected string
+ * \return True of false
+ */
+bool
+Config::check_or(const std::string &elem, const char *value, const std::string &val_true,
+                 const std::string &val_false)
+{
+    if (strcasecmp(value, val_true.c_str()) == 0) {
+        return true;
+    }
+
+    if (strcasecmp(value, val_false.c_str()) == 0) {
+        return false;
+    }
+
+    // Error
+    throw std::invalid_argument("Unexpected parameter of the element <" + elem + "> (expected '"
+                                + val_true + "' or '" + val_false + "')");
 }
 
 /**
@@ -76,6 +236,10 @@ Config::parse_params(fds_xml_ctx_t *params)
 void
 Config::default_set()
 {
+    options.check_rate = 0;
+    options.mtu_size = 1500;
+    options.proto = options.SEND_PROTO_TCP;
+    options.oper_mode = options.SEND_MODE_ALL;
 }
 
 /**
@@ -85,45 +249,39 @@ Config::default_set()
 void
 Config::check_validity()
 {
+    //TODO
 }
 
 Config::Config(const char *params)
 {
     default_set();
+
+    // Create XML parser
+    std::unique_ptr<fds_xml_t, decltype(&fds_xml_destroy)> xml(fds_xml_create(), &fds_xml_destroy);
+    if (!xml) {
+        throw std::runtime_error("Failed to create an XML parser!");
+    }
+
+    if (fds_xml_set_args(xml.get(), args_params) != FDS_OK) {
+        throw std::runtime_error("Failed to parse the description of an XML document!");
+    }
+
+    fds_xml_ctx_t *params_ctx = fds_xml_parse_mem(xml.get(), params, true);
+    if (!params_ctx) {
+        std::string err = fds_xml_last_err(xml.get());
+        throw std::runtime_error("Failed to parse the configuration: " + err);
+    }
+
+    // Parse parameters and check configuration
+    try {
+        parse_params(params_ctx);
+        check_validity();
+    } catch (std::exception &ex) {
+        throw std::runtime_error("Failed to parse the configuration: " + std::string(ex.what()));
+    }
 }
 
 Config::~Config()
 {
     // Nothing to do
-}
-
-int
-parse_version(const std::string &str, int version[4])
-{
-    static const int FIELDS_MIN = 2;
-    static const int FIELDS_MAX = 4;
-
-    // Parse the required version
-    std::istringstream parser(str);
-    for (int i = 0; i < FIELDS_MAX; ++i) {
-        version[i] = 0;
-    }
-
-    int idx;
-    for (idx = 0; idx < FIELDS_MAX && !parser.eof(); idx++) {
-        if (idx != 0 && parser.get() != '.') {
-            return IPX_ERR_FORMAT;
-        }
-
-        parser >> version[idx];
-        if (parser.fail() || version[idx] < 0) {
-            return IPX_ERR_FORMAT;
-        }
-    }
-
-    if (!parser.eof() || idx < FIELDS_MIN) {
-        return IPX_ERR_FORMAT;
-    }
-
-    return IPX_OK;
 }

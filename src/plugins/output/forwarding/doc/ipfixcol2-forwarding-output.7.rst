@@ -2,9 +2,9 @@
  ipfixcol2-forwarding-output
 ============================
 
---------------------
+---------------------------
 Forwarding (output plugin)
---------------------
+---------------------------
 
 :Author: Lukáš Huták (lukas.hutak@cesnet.cz)
 :Author: Petr Velan (petr.velan@cesnet.cz)

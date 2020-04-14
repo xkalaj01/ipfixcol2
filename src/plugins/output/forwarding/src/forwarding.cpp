@@ -44,6 +44,8 @@
 #include <memory>
 
 #include "Config.hpp"
+#include "packet.h"
+#include "sender.h"
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
@@ -65,17 +67,47 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
 struct Instance {
     /** Parser configuration                                                                     */
     Config *config;
+    /** Packet builder                                                                   */
+    fwd_bldr_t *pkt_bldr;
+    /** Sender                                                                     */
+    fwd_sender_t *sender;
 };
 
 
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
 {
+    struct Instance *data = nullptr;
+    try {
+        // Create and parse the configuration
+        std::unique_ptr<Instance> ptr(new Instance);
+        std::unique_ptr<Config> cfg(new Config(params));
+
+        // Success
+        data = ptr.release();
+        data->config = cfg.release();
+        data->pkt_bldr = bldr_create();
+
+    } catch (std::exception &ex) {
+        IPX_CTX_ERROR(ctx, "%s", ex.what());
+        return IPX_ERR_DENIED;
+    } catch (...) {
+        IPX_CTX_ERROR(ctx, "Unexpected exception has occurred!", '\0');
+        return IPX_ERR_DENIED;
+    }
+
+    ipx_ctx_private_set(ctx, data);
+    return IPX_OK;
 }
 
 void
 ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
 {
+    (void) ctx;
+
+    struct Instance *data = reinterpret_cast<struct Instance *>(cfg);
+    delete data->config;
+    delete data;
 }
 
 int
