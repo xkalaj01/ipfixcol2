@@ -48,6 +48,7 @@
 #include <netdb.h>
 // IPFIXcol API
 #include <ipfixcol2.h>
+#include <c++/7/stdexcept>
 
 #include "sender.h"
 
@@ -78,7 +79,7 @@ struct _fwd_sender {
  * \return Same as getaddrinfo()
  * \warning Returned structure MUST be freed using freeaddrinfo()
  */
-static struct addrinfo *sender_getaddrinfo(ipx_ctx_t *ctx, const char *addr, const char *port, int proto)
+static struct addrinfo *sender_getaddrinfo(const char *addr, const char *port, int proto)
 {
 	int ret_val;
 	struct addrinfo hints;
@@ -93,8 +94,8 @@ static struct addrinfo *sender_getaddrinfo(ipx_ctx_t *ctx, const char *addr, con
 	ret_val = getaddrinfo(addr, port, &hints, &info);
 	if (ret_val != 0) {
 		// Failed to translate a given address
-		IPX_CTX_ERROR(ctx, "Failed to translate address (%s).",
-			gai_strerror(ret_val));
+//		IPX_CTX_ERROR(ctx, "Failed to translate address (%s).",
+//			gai_strerror(ret_val));
 		return NULL;
 	}
 
@@ -120,7 +121,7 @@ static void sender_socket_close(fwd_sender_t *s)
 }
 
 /** Create a new sender */
-fwd_sender_t *sender_create(ipx_ctx_t *ctx, const char *addr, const char *port, int proto)
+fwd_sender_t *sender_create(const char *addr, const char *port, int proto)
 {
 	// Check parameters
 	if (!addr || !port) {
@@ -129,7 +130,7 @@ fwd_sender_t *sender_create(ipx_ctx_t *ctx, const char *addr, const char *port, 
 
 	// Just try to translate a given address
 	struct addrinfo *info;
-	info = sender_getaddrinfo(ctx, addr, port, proto);
+	info = sender_getaddrinfo(addr, port, proto);
 	if (!info) {
 		return NULL;
 	}
@@ -139,8 +140,8 @@ fwd_sender_t *sender_create(ipx_ctx_t *ctx, const char *addr, const char *port, 
 	fwd_sender_t *res;
 	res = (fwd_sender_t *) calloc(1, sizeof(fwd_sender_t));
 	if (!res) {
-		IPX_CTX_ERROR(ctx, "Memory allocation failed (%s:%d)",
-			__FILE__, __LINE__);
+//		IPX_CTX_ERROR(ctx, "Memory allocation failed (%s:%d)",
+//			__FILE__, __LINE__);
 		return NULL;
 	}
 
@@ -209,7 +210,7 @@ void sender_set_tmpl_time(fwd_sender_t *s, time_t time)
 }
 
 /** (Re)connect to the destination */
-int sender_connect(ipx_ctx_t *ctx, fwd_sender_t *s)
+int sender_connect(fwd_sender_t *s)
 {
 	if (s->socket_fd != SOCKET_INVALID) {
 		// Socket already connected -> close
@@ -218,7 +219,7 @@ int sender_connect(ipx_ctx_t *ctx, fwd_sender_t *s)
 
 	// Get a translation of an address
 	struct addrinfo *dst_info;
-	dst_info = sender_getaddrinfo(ctx, s->dst_addr, s->dst_port, s->proto);
+	dst_info = sender_getaddrinfo(s->dst_addr, s->dst_port, s->proto);
 	if (!dst_info) {
 		return 1;
 	}
@@ -261,14 +262,14 @@ int sender_connect(ipx_ctx_t *ctx, fwd_sender_t *s)
  * \param[in] len Required size of the memory
  * \return Pointer or NULL
  */
-static uint8_t *sender_prepare_buffer(ipx_ctx_t *ctx, fwd_sender_t *s, size_t size)
+static uint8_t *sender_prepare_buffer(fwd_sender_t *s, size_t size)
 {
 	if (!s->buffer_data) {
 		// Not initialized yet
 		s->buffer_data = (uint8_t *) malloc(BUFFER_SIZE);
 		if (!s->buffer_data) {
-			IPX_CTX_ERROR(ctx, "Memory allocation failed (%s:%d)",
-				__FILE__, __LINE__);
+//			IPX_CTX_ERROR(ctx, "Memory allocation failed (%s:%d)",
+//				__FILE__, __LINE__);
 			return NULL;
 		}
 
@@ -293,9 +294,9 @@ static uint8_t *sender_prepare_buffer(ipx_ctx_t *ctx, fwd_sender_t *s, size_t si
  * \param[in] len Size of data
  * \return On success returns 0. Otherwise returns non-zero value.
  */
-static int sender_buffer_store(ipx_ctx_t *ctx, fwd_sender_t *s, const uint8_t *data, size_t size)
+static int sender_buffer_store(fwd_sender_t *s, const uint8_t *data, size_t size)
 {
-	uint8_t *buffer = sender_prepare_buffer(ctx, s, size);
+	uint8_t *buffer = sender_prepare_buffer(s, size);
 	if (!buffer) {
 		return 1;
 	}
@@ -312,7 +313,7 @@ static int sender_buffer_store(ipx_ctx_t *ctx, fwd_sender_t *s, const uint8_t *d
  * \param[in] offset Drop first N bytes
  * \return On success return 0. Otherwise returns non-zero value.
  */
-static int sender_buffer_store_io(ipx_ctx_t *ctx, fwd_sender_t *s, const struct iovec *io,
+static int sender_buffer_store_io(fwd_sender_t *s, const struct iovec *io,
 	size_t parts, size_t offset)
 {
 	// Get length of the packet
@@ -327,7 +328,7 @@ static int sender_buffer_store_io(ipx_ctx_t *ctx, fwd_sender_t *s, const struct 
 	}
 
 	total_len -= offset; // Size of required memory
-	uint8_t *buffer = sender_prepare_buffer(ctx, s, total_len);
+	uint8_t *buffer = sender_prepare_buffer(s, total_len);
 	if (!buffer) {
 		return 1;
 	}
@@ -369,7 +370,7 @@ static int sender_buffer_store_io(ipx_ctx_t *ctx, fwd_sender_t *s, const struct 
  * \return When the buffer is empty returns 0. Otherwise (something is still
  * in the buffer) returns non-zero value.
  */
-int sender_send_buffer(ipx_ctx_t *ctx, fwd_sender_t *s, enum SEND_MODE mode)
+int sender_send_buffer(fwd_sender_t *s, enum SEND_MODE mode)
 {
 	if (s->socket_fd == SOCKET_INVALID) {
 		return 1;
@@ -401,8 +402,8 @@ int sender_send_buffer(ipx_ctx_t *ctx, fwd_sender_t *s, enum SEND_MODE mode)
 
 		if (errno != EAGAIN && errno != EWOULDBLOCK) {
 			// Unexpected type of error
-			IPX_CTX_WARNING(ctx, "Connection to \"%s:%s\" closed (%s).",
-				s->dst_addr, s->dst_port, strerror(errno));
+//			IPX_CTX_WARNING(ctx, "Connection to \"%s:%s\" closed (%s).",
+//				s->dst_addr, s->dst_port, strerror(errno));
 			sender_socket_close(s);
 			return 1;
 		}
@@ -430,11 +431,11 @@ int sender_send_buffer(ipx_ctx_t *ctx, fwd_sender_t *s, enum SEND_MODE mode)
 
 
 /** Send data to the destination */
-enum SEND_STATUS sender_send(ipx_ctx_t *ctx, fwd_sender_t *s, const void *buf, size_t len,
+enum SEND_STATUS sender_send(fwd_sender_t *s, const void *buf, size_t len,
 	enum SEND_MODE mode, bool required)
 {
 	// Send a content of the internal buffery (if any)
-	if (sender_send_buffer(ctx, s, mode)) {
+	if (sender_send_buffer(s, mode)) {
 		if (s->socket_fd == SOCKET_INVALID) {
 			// Socket closed
 			return STATUS_CLOSED;
@@ -446,11 +447,11 @@ enum SEND_STATUS sender_send(ipx_ctx_t *ctx, fwd_sender_t *s, const void *buf, s
 		}
 
 		// Required delivery
-		if (sender_buffer_store(ctx, s, buf, len)) {
-			IPX_CTX_WARNING(ctx, "Unable to store 'required' message for "
-				"'%s:%s' into the internal buffer. Connection must be closed to"
-				" prevent receiving invalid messages.", sender_get_address(s),
-				sender_get_port(s));
+		if (sender_buffer_store(s, (const uint8_t *) buf, len)) {
+//			IPX_CTX_WARNING(ctx, "Unable to store 'required' message for "
+//				"'%s:%s' into the internal buffer. Connection must be closed to"
+//				" prevent receiving invalid messages.", sender_get_address(s),
+//				sender_get_port(s));
 			sender_socket_close(s);
 			return STATUS_CLOSED;
 		}
@@ -478,8 +479,8 @@ enum SEND_STATUS sender_send(ipx_ctx_t *ctx, fwd_sender_t *s, const void *buf, s
 
 		if (errno != EAGAIN && errno != EWOULDBLOCK) {
 			// Unexpected type of error
-			IPX_CTX_WARNING(ctx, "Connection to \"%s:%s\" closed (%s).",
-				s->dst_addr, s->dst_port, strerror(errno));
+//			IPX_CTX_WARNING(ctx, "Connection to \"%s:%s\" closed (%s).",
+//				s->dst_addr, s->dst_port, strerror(errno));
 			sender_socket_close(s);
 			return STATUS_CLOSED;
 		}
@@ -496,10 +497,10 @@ enum SEND_STATUS sender_send(ipx_ctx_t *ctx, fwd_sender_t *s, const void *buf, s
 		}
 
 		// Required data or partially sent -> store
-		if (sender_buffer_store(ctx, s, ptr, todo)) {
-			IPX_CTX_ERROR(ctx, "Unable to store a rest of the message for "
-				"'%s:%s̈́'. Connection must be closed to prevent receiving "
-				"invalid messages.", sender_get_address(s), sender_get_port(s));
+		if (sender_buffer_store(s, ptr, todo)) {
+//			IPX_CTX_ERROR(ctx, "Unable to store a rest of the message for "
+//				"'%s:%s̈́'. Connection must be closed to prevent receiving "
+//				"invalid messages.", sender_get_address(s), sender_get_port(s));
 			sender_socket_close(s);
 			return STATUS_CLOSED;
 		}
@@ -512,11 +513,11 @@ enum SEND_STATUS sender_send(ipx_ctx_t *ctx, fwd_sender_t *s, const void *buf, s
 }
 
 /** Send data to the destination */
-enum SEND_STATUS sender_send_parts(ipx_ctx_t *ctx, fwd_sender_t *s, struct iovec *io,
+enum SEND_STATUS sender_send_parts(fwd_sender_t *s, struct iovec *io,
 	size_t parts, enum SEND_MODE mode, bool required)
 {
 	// Send the content of the internal buffery (if any)
-	if (sender_send_buffer(ctx, s, mode)) {
+	if (sender_send_buffer(s, mode)) {
 		if (s->socket_fd == SOCKET_INVALID) {
 			// Socket closed
 			return STATUS_CLOSED;
@@ -528,11 +529,11 @@ enum SEND_STATUS sender_send_parts(ipx_ctx_t *ctx, fwd_sender_t *s, struct iovec
 		}
 
 		// Required delivery
-		if (sender_buffer_store_io(ctx, s, io, parts, 0)) {
-			IPX_CTX_WARNING(ctx, "Unable to store 'required' message for "
-				"'%s:%s' into the internal buffer. Connection must be closed to"
-				" prevent receiving invalid messages.", sender_get_address(s),
-				sender_get_port(s));
+		if (sender_buffer_store_io(s, io, parts, 0)) {
+//			IPX_CTX_WARNING(ctx, "Unable to store 'required' message for "
+//				"'%s:%s' into the internal buffer. Connection must be closed to"
+//				" prevent receiving invalid messages.", sender_get_address(s),
+//				sender_get_port(s));
 			sender_socket_close(s);
 			return STATUS_CLOSED;
 		}
@@ -569,14 +570,14 @@ before_sendmsg:
 		}
 
 		// Only a part of the message was sent -> store the rest
-		IPX_CTX_DEBUG(ctx, "Packet partially sent (%u of %u)",
-			(unsigned int) sent, (unsigned int) total_len);
+//		IPX_CTX_DEBUG(ctx, "Packet partially sent (%u of %u)",
+//			(unsigned int) sent, (unsigned int) total_len);
 
-		if (sender_buffer_store_io(ctx, s, io, parts, sent)) {
+		if (sender_buffer_store_io(s, io, parts, sent)) {
 			// Failed to store the rest of the message -> disconnect
-			IPX_CTX_WARNING(ctx, "Unable to store a rest of the message for "
-				"'%s:%s̈́'. Connection must be closed to prevent receiving "
-				"invalid messages.", sender_get_address(s), sender_get_port(s));
+//			IPX_CTX_WARNING(ctx, "Unable to store a rest of the message for "
+//				"'%s:%s̈́'. Connection must be closed to prevent receiving "
+//				"invalid messages.", sender_get_address(s), sender_get_port(s));
 			sender_socket_close(s);
 			return STATUS_CLOSED;
 		}
@@ -587,8 +588,8 @@ before_sendmsg:
 	// Return value is "-1" i.e. nothing was sent
 	if (errno != EAGAIN && errno != EWOULDBLOCK) {
 		// Unexpected type of error
-		IPX_CTX_WARNING(ctx, "Connection to \"%s:%s\" closed (%s).",
-			s->dst_addr, s->dst_port, strerror(errno));
+//		IPX_CTX_WARNING(ctx, "Connection to \"%s:%s\" closed (%s).",
+//			s->dst_addr, s->dst_port, strerror(errno));
 		sender_socket_close(s);
 		return STATUS_CLOSED;
 	}
@@ -604,10 +605,10 @@ before_sendmsg:
 	}
 
 	// Required message must be stored !!!
-	if (sender_buffer_store_io(ctx, s, io, parts, 0)) {
-		IPX_CTX_WARNING(ctx, "Unable to send 'required' message to "
-			"'%s:%s'. Connection must be close to prevent receiving "
-			"invalid messages.", sender_get_address(s), sender_get_port(s));
+	if (sender_buffer_store_io(s, io, parts, 0)) {
+//		IPX_CTX_WARNING(ctx, "Unable to send 'required' message to "
+//			"'%s:%s'. Connection must be close to prevent receiving "
+//			"invalid messages.", sender_get_address(s), sender_get_port(s));
 		sender_socket_close(s);
 		return STATUS_CLOSED;
 	}

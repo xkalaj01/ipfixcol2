@@ -76,7 +76,7 @@ typedef struct _fwd_sender fwd_sender_t;
  * \param[in] proto Transport protocol
  * \return On success returns pointer to new sender. Otherwise returns NULL.
  */
-fwd_sender_t *sender_create(ipx_ctx_t *ctx, const char *addr, const char *port, int proto);
+fwd_sender_t *sender_create(const char *addr, const char *port, int proto);
 
 /**
  * \brief Destroy a sender
@@ -126,7 +126,7 @@ void sender_set_tmpl_time(fwd_sender_t *s, time_t time);
  * \param[in,out] s Sender structure
  * \return On success returns 0. Otherwise returns non-zero value.
  */
-int sender_connect(ipx_ctx_t *ctx, fwd_sender_t *s);
+int sender_connect(fwd_sender_t *s);
 
 /**
  * \brief Send data to the destination
@@ -141,7 +141,7 @@ int sender_connect(ipx_ctx_t *ctx, fwd_sender_t *s);
  * \param[in] required Required delivery
  * \return Status of the operation
  */
-enum SEND_STATUS sender_send(ipx_ctx_t *ctx, fwd_sender_t *s, const void *buf, size_t len,
+enum SEND_STATUS sender_send(fwd_sender_t *s, const void *buf, size_t len,
 	enum SEND_MODE mode, bool required);
 
 /**
@@ -157,7 +157,7 @@ enum SEND_STATUS sender_send(ipx_ctx_t *ctx, fwd_sender_t *s, const void *buf, s
  * \param[in] required Required delivery
  * \return Status of the operation
  */
-enum SEND_STATUS sender_send_parts(ipx_ctx_t *ctx, fwd_sender_t *s, struct iovec *io,
+enum SEND_STATUS sender_send_parts(fwd_sender_t *s, struct iovec *io,
 	size_t parts, enum SEND_MODE mode, bool required);
 
 #endif // SENDER_H

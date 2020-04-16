@@ -120,7 +120,7 @@ void bldr_start(fwd_bldr_t *pkt, uint32_t odid, uint32_t exp_time);
  * \return On success returns 0. Otherwise returns non-zero value and
  *   a content of the builder is NOT defined until call bldr_pkts_start().
  */
-int bldr_end(ipx_ctx_t *ctx, fwd_bldr_t *pkt, uint16_t len);
+int bldr_end(fwd_bldr_t *pkt, uint16_t len);
 
 /**
  * \brief Add a Data set
@@ -136,7 +136,7 @@ int bldr_end(ipx_ctx_t *ctx, fwd_bldr_t *pkt, uint16_t len);
  *   content of the builder is undefined until calling function bldr_start().
  * \remark A size of the Data set is derived from a header of the set.
  */
-int bldr_add_dataset(ipx_ctx_t *ctx, fwd_bldr_t *pkt, const struct fds_ipfix_dset *data,
+int bldr_add_dataset(fwd_bldr_t *pkt, const struct fds_ipfix_dset *data,
 	uint16_t new_id, unsigned int rec);
 
 /**
@@ -153,7 +153,7 @@ int bldr_add_dataset(ipx_ctx_t *ctx, fwd_bldr_t *pkt, const struct fds_ipfix_dse
  * \return On success returns 0. Otherwise returns non-zero value and the
  *   content of the builder is undefined until calling function bldr_start().
  */
-int bldr_add_template(ipx_ctx_t *ctx, fwd_bldr_t *pkt, const void *data, size_t size,
+int bldr_add_template(fwd_bldr_t *pkt, const void *data, size_t size,
 	uint16_t new_id, int type);
 
 /**
@@ -164,7 +164,7 @@ int bldr_add_template(ipx_ctx_t *ctx, fwd_bldr_t *pkt, const void *data, size_t 
  * \return On success returns 0. Otherwise returns non-zero value and the
  *   content of the builder is undefined until calling function bldr_start().
  */
-int bldr_add_template_withdrawal(ipx_ctx_t *ctx, fwd_bldr_t *pkt, uint16_t id, int type);
+int bldr_add_template_withdrawal(fwd_bldr_t *pkt, uint16_t id, int type);
 
 /**
  * \brief Get a number of generated packets
@@ -192,7 +192,7 @@ uint32_t bldr_pkts_get_odid(const fwd_bldr_t *pkt);
  * \warning Generated packet MUST be free by calling function free
  * \return On success returns 0. Otherwise returns non-zero value.
  */
-int bldr_pkts_raw(ipx_ctx_t *ctx, fwd_bldr_t *pkt, uint32_t seq_num, size_t idx, size_t offset,
+int bldr_pkts_raw(fwd_bldr_t *pkt, uint32_t seq_num, size_t idx, size_t offset,
 	char **new_packet, size_t *size, size_t *rec_cnt);
 
 /**

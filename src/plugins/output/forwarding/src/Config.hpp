@@ -70,7 +70,7 @@ struct cfg_host {
     /** Remote IPv4/IPv6 address                                                                 */
     std::string addr;
     /** Destination port                                                                         */
-    uint32_t port;
+    std::string port;
 };
 
 

@@ -68,7 +68,7 @@ enum params_xml_nodes {
 static const struct fds_xml_args args_host[] = {
         FDS_OPTS_ELEM(HOST_NAME, "name", FDS_OPTS_T_STRING, 0),
         FDS_OPTS_ELEM(HOST_IPV4, "ipv4", FDS_OPTS_T_STRING, 0),
-        FDS_OPTS_ELEM(HOST_PORT, "port", FDS_OPTS_T_UINT, 0),
+        FDS_OPTS_ELEM(HOST_PORT, "port", FDS_OPTS_T_STRING, 0),
         FDS_OPTS_END
 };
 
@@ -109,8 +109,8 @@ Config::parse_host(fds_xml_ctx_t *host)
                 new_host.addr = content->ptr_string;
                 break;
             case (HOST_PORT):
-                assert(content->type == FDS_OPTS_T_UINT);
-                new_host.port = content->val_uint;
+                assert(content->type == FDS_OPTS_T_STRING);
+                new_host.port = content->ptr_string;
                 break;
 
             default:

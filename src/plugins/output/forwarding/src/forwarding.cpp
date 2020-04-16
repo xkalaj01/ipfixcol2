@@ -44,8 +44,7 @@
 #include <memory>
 
 #include "Config.hpp"
-#include "packet.h"
-#include "sender.h"
+#include "Forwarder.h"
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
@@ -67,10 +66,8 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
 struct Instance {
     /** Parser configuration                                                                     */
     Config *config;
-    /** Packet builder                                                                   */
-    fwd_bldr_t *pkt_bldr;
-    /** Sender                                                                     */
-    fwd_sender_t *sender;
+    /** Forwarder */
+    Forwarder *forwarder;
 };
 
 
@@ -86,7 +83,9 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         // Success
         data = ptr.release();
         data->config = cfg.release();
-        data->pkt_bldr = bldr_create();
+
+        std::unique_ptr<Forwarder> frwdr(new Forwarder(data->config));
+        data->forwarder = frwdr.release();
 
     } catch (std::exception &ex) {
         IPX_CTX_ERROR(ctx, "%s", ex.what());
@@ -107,6 +106,7 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
 
     struct Instance *data = reinterpret_cast<struct Instance *>(cfg);
     delete data->config;
+    delete data->forwarder;
     delete data;
 }
 
