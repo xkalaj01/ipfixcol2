@@ -58,10 +58,7 @@ struct cfg_options {
         SEND_MODE_ALL,
     } oper_mode;
     /** Transport Protocol                                                                       */
-    enum {
-        SEND_PROTO_UDP,
-        SEND_PROTO_TCP
-    } proto;
+    int proto;
 };
 
 struct cfg_host {

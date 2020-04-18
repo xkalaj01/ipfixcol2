@@ -96,6 +96,12 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
     }
 
     ipx_ctx_private_set(ctx, data);
+
+    // Subscribe to receive session messages
+    ipx_ctx_private_set(ctx, data);
+    ipx_msg_mask_t mask = IPX_MSG_IPFIX|IPX_MSG_SESSION;
+    ipx_ctx_subscribe(ctx, &mask, nullptr);
+
     return IPX_OK;
 }
 
@@ -113,5 +119,17 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
 int
 ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
 {
+
+    struct Instance *data = reinterpret_cast<struct Instance *>(cfg);
+    const fds_iemgr_t *iemgr = ipx_ctx_iemgr_get(ctx);
+    ipx_msg_type msg_type = ipx_msg_get_type(msg);
+
+    data->forwarder->processMsg(msg, iemgr);
+
+
+    if (msg_type == IPX_MSG_IPFIX) {
+        data->forwarder->forward(msg);
+    }
+
     return IPX_OK;
 }

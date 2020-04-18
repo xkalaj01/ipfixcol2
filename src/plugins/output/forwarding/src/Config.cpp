@@ -159,7 +159,7 @@ Config::parse_params(fds_xml_ctx_t *params)
             case GLOBAL_PROTO:
                 assert(content->type == FDS_OPTS_T_STRING);
                 options.proto = check_or("protocol", content->ptr_string, "UDP", "TCP")
-                                ? cfg_options::SEND_PROTO_UDP : cfg_options::SEND_PROTO_TCP;
+                                ? IPPROTO_UDP : IPPROTO_TCP;
                 break;
             case GLOBAL_MODE:
                 assert(content->type == FDS_OPTS_T_STRING);
@@ -238,7 +238,7 @@ Config::default_set()
 {
     options.check_rate = 0;
     options.mtu_size = 1500;
-    options.proto = options.SEND_PROTO_TCP;
+    options.proto = IPPROTO_TCP;
     options.oper_mode = options.SEND_MODE_ALL;
 }
 

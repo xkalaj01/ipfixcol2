@@ -11,9 +11,16 @@
 #include "packet.h"
 #include "sender.h"
 
-struct connection_info{
-    cfg_host*       info;
-    fwd_sender_t*   conn;
+
+struct connection{
+    fwd_sender_t*               sender;
+    const struct ipx_session*   input_session;
+    SEND_STATUS                 status;
+};
+
+struct destination_info{
+    cfg_host*                  info;
+    std::vector<connection*>   connections;
 };
 
 class Forwarder {
@@ -21,22 +28,44 @@ public:
     Forwarder(Config* config);
     ~Forwarder();
 
-    
+//    void reconnectorStart();
+//    void reconnectorStop();
+
+    void processMsg(ipx_msg_t *msg, const fds_iemgr_t *iemgr);
+
+    void processIPFIX(ipx_msg_ipfix_t *msg_ipfix);
+    void processSession(ipx_msg_session_t *msg_session);
+
+    void processTemplateSet(fds_ipfix_set_hdr *tset);
+    void processDataSet(ipx_msg_ipfix_t *msg, fds_ipfix_set_hdr *dset);
+
+    void forward(ipx_msg_t *msg);
+
+    void sendAll(ipx_msg_t *msg);
+
+    SEND_STATUS packetSender(fwd_bldr_t *builder, struct connection *conn, bool req_flag);
+
+
+
+
+
 
 private:
     ipx_ctx_t*      ctx;
     Config*         config;
-    fwd_bldr_t*     pkt_builder;
+    fwd_bldr_t*     builder_all;
+    fwd_bldr_t*     builder_tmplt;
     fwd_sender_t*   sender;
 
-    std::vector<connection_info*>   connections_active;
-    std::vector<connection_info*>   connections_idle;
-    std::atomic_flag                connections_queue_lock;
+    std::vector<destination_info*>   destinations;
+    std::vector<connection*>         idle_connections;
+    std::atomic_flag                 destinations_lock;
 
-    void connection_checking();
-    std::thread             checking_thread;
-    std::mutex              checking_thread_mutex;
-    std::condition_variable checking_thread_cv;
+    // Reconnection thread, that tries to reconnect disconnected
+    void reconnector();
+    std::thread             reconnection_thread;
+    std::mutex              reconnection_thread_mutex;
+    std::condition_variable reconnection_thread_cv;
 
 
 };
