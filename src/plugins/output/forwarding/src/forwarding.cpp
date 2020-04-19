@@ -84,7 +84,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         data = ptr.release();
         data->config = cfg.release();
 
-        std::unique_ptr<Forwarder> frwdr(new Forwarder(data->config));
+        std::unique_ptr<Forwarder> frwdr(new Forwarder(ctx, data->config));
         data->forwarder = frwdr.release();
 
     } catch (std::exception &ex) {
@@ -121,14 +121,19 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
 {
 
     struct Instance *data = reinterpret_cast<struct Instance *>(cfg);
-    const fds_iemgr_t *iemgr = ipx_ctx_iemgr_get(ctx);
     ipx_msg_type msg_type = ipx_msg_get_type(msg);
 
-    data->forwarder->processMsg(msg, iemgr);
+    // Process the message
+    try {
+        data->forwarder->processMsg(msg);
 
-
-    if (msg_type == IPX_MSG_IPFIX) {
-        data->forwarder->forward(msg);
+        // Forward it if IPFIX message
+        if (msg_type == IPX_MSG_IPFIX) {
+            ipx_msg_ipfix_t *msg_ipfix = ipx_msg_base2ipfix(msg);
+            data->forwarder->forward(msg_ipfix);
+        }
+    } catch (...){
+        IPX_CTX_WARNING(ctx, "SOME %s!!!", "WARNING");
     }
 
     return IPX_OK;
