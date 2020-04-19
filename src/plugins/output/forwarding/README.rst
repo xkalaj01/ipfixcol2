@@ -21,15 +21,15 @@ Don't forget to remove (or comment) outputs that you don't want to use!
             <hosts>
 
                 <host>
-                    <name>Local server</name>
+                    <name>Backup collector 1</name>
                     <ipv4>127.0.0.1</ipv4>
-                    <port>8000</port>
+                    <port>4251</port>
                 </host>
 
                 <host>
-                    <name>Local server</name>
+                    <name>Backup collector 2</name>
                     <ipv4>127.0.0.1</ipv4>
-                    <port>8000</port>
+                    <port>4252</port>
                 </host>
 
             </hosts>

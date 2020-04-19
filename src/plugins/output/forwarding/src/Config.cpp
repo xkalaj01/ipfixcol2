@@ -1,11 +1,11 @@
 /**
- * \file src/plugins/output/json/src/Config.cpp
- * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief Configuration of JSON output plugin (source file)
- * \date 2018-2020
+ * \file src/plugins/output/forwarding/src/Config.cpp
+ * \author Jan Kala <xkalaj01@stud.fit.vutbr.cz>
+ * \brief Forwarding output (source file)
+ * \date 2020
  */
 
-/* Copyright (C) 2018-2020 CESNET, z.s.p.o.
+/* Copyright (C) 2020 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
