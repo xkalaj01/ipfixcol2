@@ -42,7 +42,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <c++/7/stdexcept>
 #include "packet.h"
 
 

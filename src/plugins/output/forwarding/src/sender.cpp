@@ -48,7 +48,6 @@
 #include <netdb.h>
 // IPFIXcol API
 #include <ipfixcol2.h>
-#include <c++/7/stdexcept>
 
 #include "sender.h"
 

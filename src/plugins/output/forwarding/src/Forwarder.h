@@ -44,6 +44,7 @@
 
 #include <thread>
 #include <condition_variable>
+#include <atomic>
 #include <ipfixcol2.h>
 #include "Config.hpp"
 #include "packet.h"
